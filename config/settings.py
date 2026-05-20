@@ -25,7 +25,9 @@ SECRET_KEY = 'django-insecure-9$kyi!&a!#j9w+ghe%uwr1v6_^*1x&@_fj7wil5#4h+j%&@jr)
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['abyrengga.pythonanywhere.com', '127.0.0.1', 'localhost']
+
+CSRF_TRUSTED_ORIGINS = ['https://abyrengga.pythonanywhere.com']
 
 
 # Application definition

@@ -416,7 +416,7 @@
       <div class="q-tool-group">
         <div class="q-tool-group__title">Preset</div>
         <div style="display:flex;gap:0.5rem">
-          <button class="q-btn q-btn--ghost q-btn--sm" style="flex:1" id="btn-load-preset" @click="window.location.href='/presets/'">
+          <button class="q-btn q-btn--ghost q-btn--sm" style="flex:1" id="btn-load-preset" @click="window.location.href='/presets/?file_id=' + fileId">
             <i data-lucide="folder-open" style="width:14px;height:14px"></i> Lihat
           </button>
           <button class="q-btn q-btn--ghost q-btn--sm" style="flex:1" id="btn-save-preset" @click="saveAsPreset()">

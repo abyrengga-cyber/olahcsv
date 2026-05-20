@@ -11,6 +11,9 @@ class FileUploadView(APIView):
     parser_classes = (MultiPartParser, FormParser)
 
     def post(self, request, *args, **kwargs):
+        if not request.user.is_authenticated:
+            return Response({'error': 'Silakan Sign-in/Login terlebih dahulu untuk mengunggah file.'}, status=status.HTTP_401_UNAUTHORIZED)
+
         # Allow multiple files to be uploaded at once
         files = request.FILES.getlist('file')
         if not files:

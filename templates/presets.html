@@ -9,7 +9,7 @@
   <p style="color:var(--q-text-secondary)">Simpan dan gunakan kembali konfigurasi pemrosesan data Anda.</p>
 </div>
 
-<div class="q-container" x-data="presetManager()" x-init="fetchPresets()">
+<div class="q-container" x-data="presetManager()" x-init="init()">
   <div class="glass-card" style="max-width:900px;margin:0 auto">
     
     <div x-show="loading" style="text-align:center;padding:3rem">
@@ -41,6 +41,9 @@
             </div>
           </div>
           <div style="display:flex;gap:0.5rem">
+            <button class="q-btn q-btn--primary q-btn--sm" x-show="fileId" @click="applyPreset(preset.id)">
+              <i data-lucide="check" style="width:16px;height:16px"></i> Gunakan
+            </button>
             <button class="q-btn q-btn--ghost q-btn--sm" @click="deletePreset(preset.id)" :disabled="deleting === preset.id">
               <template x-if="deleting === preset.id">
                 <span>Menghapus...</span>
@@ -62,6 +65,19 @@ function presetManager() {
     presets: [],
     loading: true,
     deleting: null,
+    fileId: null,
+
+    init() {
+      const urlParams = new URLSearchParams(window.location.search);
+      this.fileId = urlParams.get('file_id');
+      this.fetchPresets();
+    },
+
+    applyPreset(presetId) {
+      if (this.fileId) {
+        window.location.href = `/workspace/?file_id=${this.fileId}&preset=${presetId}`;
+      }
+    },
 
     async fetchPresets() {
       try {

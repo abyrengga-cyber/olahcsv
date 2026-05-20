@@ -82,11 +82,64 @@ document.addEventListener('alpine:init', () => {
       // Get file_id from URL
       const urlParams = new URLSearchParams(window.location.search);
       this.fileId = urlParams.get('file_id');
+      const presetId = urlParams.get('preset');
       
       if (this.fileId) {
         await this.loadPreview();
+        // If preset requested, apply it after preview is loaded
+        if (presetId) {
+            await this.loadPreset(presetId);
+        }
       } else {
         Toast.error("Tidak ada file yang dipilih.");
+      }
+    },
+
+    async loadPreset(presetId) {
+      try {
+        const response = await fetch(`/presets/api/`);
+        const presets = await response.json();
+        const preset = presets.find(p => String(p.id) === String(presetId));
+        
+        if (!preset) {
+            Toast.error("Preset tidak ditemukan.");
+            return;
+        }
+
+        // Apply column config
+        if (preset.column_config && preset.column_config.length > 0) {
+            const savedCols = preset.column_config[0].columns;
+            if (this.files.length > 0) {
+                this.files[0].metadata.columns.forEach(c => {
+                    const savedC = savedCols.find(x => x.name === c.name);
+                    if (savedC) {
+                        c.selected = savedC.include;
+                    }
+                });
+                this.updateDisplayColumns();
+            }
+        }
+
+        // Apply tools config
+        if (preset.datetime_config) {
+            Object.assign(this.tools.datetime, preset.datetime_config);
+        }
+        if (preset.export_config) {
+            if (preset.export_config.aggregate) {
+                Object.assign(this.tools.aggregate, preset.export_config.aggregate);
+            }
+            if (preset.export_config.compare) {
+                Object.assign(this.tools.compare, preset.export_config.compare);
+            }
+        }
+        
+        Toast.success(`Preset "${preset.name}" berhasil diterapkan!`);
+        
+        // Clean URL so refresh doesn't re-apply
+        window.history.replaceState({}, '', `/workspace/?file_id=${this.fileId}`);
+      } catch (e) {
+          console.error(e);
+          Toast.error("Gagal memuat preset.");
       }
     },
 
