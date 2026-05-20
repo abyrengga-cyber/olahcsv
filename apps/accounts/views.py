@@ -18,14 +18,14 @@ def dashboard(request):
         })
 
     user = request.user
-    recent_files = UploadedFile.objects.filter(user=user).order_by('-upload_at')[:5]
+    recent_files = UploadedFile.objects.filter(user=user).order_by('-upload_at')
     total_files = UploadedFile.objects.filter(user=user).count()
     
     col_sum = UploadedFile.objects.filter(user=user).aggregate(Sum('column_count'))['column_count__sum']
     total_columns = col_sum if col_sum else 0
     
     total_presets = Preset.objects.filter(user=user).count()
-    recent_presets = Preset.objects.filter(user=user).order_by('-created_at')[:5]
+    recent_presets = Preset.objects.filter(user=user).order_by('-created_at')
     
     total_exports = ExportJob.objects.filter(session__user=user, status='COMPLETED').count()
 

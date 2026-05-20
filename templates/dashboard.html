@@ -77,12 +77,11 @@
       <div class="q-panel__header">
         <div class="q-panel__title">
           <i data-lucide="clock" style="width:14px;height:14px;vertical-align:middle;margin-right:4px"></i>
-          File Terbaru
+          File Anda
         </div>
-        <a href="/workspace/" class="q-section__action">Lihat semua →</a>
       </div>
       <div style="padding:0.75rem 1rem">
-        <div class="q-file-list">
+        <div class="q-file-list" style="max-height: 250px; overflow-y: auto; padding-right: 0.5rem;">
           {% for file in recent_files %}
           <div class="q-file-item" style="padding:0.75rem 1rem">
             <div class="q-file-item__icon--csv" style="width:32px;height:32px;border-radius:8px;display:flex;align-items:center;justify-content:center;background:rgba(20,184,166,0.15);color:var(--q-primary)">
@@ -111,12 +110,11 @@
       <div class="q-panel__header">
         <div class="q-panel__title">
           <i data-lucide="zap" style="width:14px;height:14px;vertical-align:middle;margin-right:4px"></i>
-          Preset Favorit
+          Daftar Preset
         </div>
-        <a href="#" class="q-section__action">Kelola →</a>
       </div>
       <div style="padding:0.75rem 1rem">
-        <div class="q-file-list">
+        <div class="q-file-list" style="max-height: 250px; overflow-y: auto; padding-right: 0.5rem;">
           {% for preset in recent_presets %}
           <div class="q-file-item" style="padding:0.75rem 1rem">
             <div class="q-file-item__icon--csv" style="width:32px;height:32px;border-radius:8px;display:flex;align-items:center;justify-content:center;background:rgba(245,158,11,0.15);color:var(--q-warning)">
