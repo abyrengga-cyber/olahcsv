@@ -589,6 +589,31 @@ document.addEventListener('alpine:init', () => {
       return document.cookie.split('; ')
         .find(row => row.startsWith('csrftoken='))
         ?.split('=')[1];
+    },
+
+    downloadChart() {
+      if (!this.chartInstance) {
+        Toast.warning("Belum ada grafik yang dibuat.");
+        return;
+      }
+      
+      const canvas = document.getElementById('chart-preview');
+      
+      const tempCanvas = document.createElement('canvas');
+      tempCanvas.width = canvas.width;
+      tempCanvas.height = canvas.height;
+      const ctx = tempCanvas.getContext('2d');
+      // Beri background gelap agar teks terlihat
+      ctx.fillStyle = '#1e293b'; 
+      ctx.fillRect(0, 0, tempCanvas.width, tempCanvas.height);
+      ctx.drawImage(canvas, 0, 0);
+
+      const link = document.createElement('a');
+      link.download = `Grafik_${this.tools.chart.yCol}_vs_${this.tools.chart.xCol}.png`;
+      link.href = tempCanvas.toDataURL('image/png');
+      link.click();
+      
+      Toast.success("Grafik berhasil diunduh.");
     }
   }));
 });
