@@ -1,0 +1,468 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Workspace{% endblock %}
+
+{% block footer %}{% endblock %}
+
+{% block content %}
+<div class="q-workspace q-fade-in" x-data="workspace">
+  {% csrf_token %}
+
+  <!-- LEFT PANEL: File & Column Manager -->
+  <div class="q-panel glass">
+    <div class="q-panel__header">
+      <div class="q-panel__title">
+        <i data-lucide="folder-tree" style="width:14px;height:14px;vertical-align:middle;margin-right:4px"></i>
+        File & Kolom
+      </div>
+      <button class="q-btn q-btn--ghost q-btn--sm q-btn--icon" data-tooltip="Tambah File" id="btn-add-file" @click="window.location.href='/'">
+        <i data-lucide="plus" style="width:14px;height:14px"></i>
+      </button>
+    </div>
+    <div class="q-panel__body">
+      <!-- Search Input -->
+      <div style="margin-bottom: 0.75rem; position: relative;">
+        <i data-lucide="search" style="position: absolute; left: 8px; top: 50%; transform: translateY(-50%); width: 14px; height: 14px; color: var(--q-text-muted);"></i>
+        <input type="text" class="q-input" x-model="searchQuery" placeholder="Cari kolom..." style="width: 100%; padding-left: 28px; font-size: 0.8rem;">
+      </div>
+
+      <template x-if="files.length === 0">
+        <div style="padding: 1rem; text-align: center; color: var(--q-text-muted); font-size: 0.8rem;">
+          Memuat metadata...
+        </div>
+      </template>
+      <template x-for="(file, fileIdx) in files" :key="file.id">
+        <div class="q-col-tree__file">
+          <div class="q-col-tree__file-header" @click="file.expanded = !file.expanded">
+            <i data-lucide="chevron-down" style="width:14px;height:14px;transition:transform 0.2s" :style="!file.expanded ? 'transform:rotate(-90deg)' : ''"></i>
+            <i data-lucide="file-spreadsheet" style="width:14px;height:14px;color:#34d399"></i>
+            <span x-text="file.filename"></span>
+            <span class="q-chip q-chip--green" style="margin-left:auto;font-size:0.6rem" x-text="file.metadata.column_count + ' col'"></span>
+          </div>
+          <div class="q-col-tree__columns" x-show="file.expanded" x-transition>
+            <template x-for="(col, colIdx) in file.metadata.columns" :key="colIdx">
+              <label class="q-col-tree__col" x-show="String(col.name).toLowerCase().includes((searchQuery || '').toLowerCase())">
+                <input type="checkbox" x-model="col.selected" @change="updateDisplayColumns()" style="accent-color:var(--q-primary)">
+                <span x-text="col.name"></span>
+                <span class="q-col-tree__col-type" :class="'q-col-tree__col-type--' + col.type" x-text="col.type"></span>
+                <span x-show="col.missing_pct > 0" class="q-col-tree__col-warn" :title="col.missing_pct + '% kosong'">⚠</span>
+              </label>
+            </template>
+          </div>
+        </div>
+      </template>
+
+      <div class="q-divider"></div>
+
+      <!-- Select All / Deselect All -->
+      <div style="display:flex;gap:0.5rem;margin-bottom:0.75rem">
+        <button class="q-btn q-btn--ghost q-btn--sm" style="flex:1;font-size:0.7rem" id="btn-select-all" @click="selectAll()">Select All</button>
+        <button class="q-btn q-btn--ghost q-btn--sm" style="flex:1;font-size:0.7rem" id="btn-deselect-all" @click="deselectAll()">Deselect</button>
+      </div>
+
+      <!-- Data Quality Summary -->
+      <div class="q-tool-group">
+        <div class="q-tool-group__title">Kualitas Data</div>
+        <div style="display:flex;flex-direction:column;gap:0.4rem">
+          <div style="display:flex;justify-content:space-between;align-items:center;font-size:0.8rem">
+            <span style="color:var(--q-text-secondary)">Baris lengkap</span>
+            <span class="q-quality-badge" 
+                  :class="quality.complete_rows_pct > 80 ? 'q-quality-badge--good' : (quality.complete_rows_pct > 50 ? 'q-quality-badge--warn' : 'q-quality-badge--error')"
+                  x-text="quality.complete_rows_pct + '%'"></span>
+          </div>
+          <div style="display:flex;justify-content:space-between;align-items:center;font-size:0.8rem">
+            <span style="color:var(--q-text-secondary)">Kolom bermasalah</span>
+            <span class="q-quality-badge"
+                  :class="quality.problematic_cols_count > 0 ? 'q-quality-badge--warn' : 'q-quality-badge--good'"
+                  x-text="quality.problematic_cols_count"></span>
+          </div>
+          <div class="q-progress" style="margin-top:0.25rem">
+            <div class="q-progress__bar" :style="'width:' + quality.complete_rows_pct + '%'"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- CENTER PANEL: Preview Table -->
+    <div class="q-panel glass" style="flex:1;overflow:hidden;display:flex;flex-direction:column">
+      <div class="q-panel__header">
+        <div class="q-panel__title">
+          <i data-lucide="table-2" style="width:14px;height:14px;vertical-align:middle;margin-right:4px"></i>
+          Preview Data
+        </div>
+        <div style="display:flex;align-items:center;gap:0.5rem">
+          <span style="font-size:0.75rem;color:var(--q-text-muted)" x-text="totalRows + ' baris'"></span>
+          <button class="q-btn q-btn--ghost q-btn--sm q-btn--icon" @click="loadPreview(currentPage)" data-tooltip="Refresh">
+            <i data-lucide="refresh-cw" style="width:13px;height:13px"></i>
+          </button>
+        </div>
+      </div>
+      <div class="q-panel__body" style="padding:0;overflow:hidden;display:flex;flex-direction:column;flex:1">
+        
+        <!-- Aggregation Result Table -->
+        <div x-show="aggregationResult.length > 0" x-transition class="q-aggregation-wrap" style="padding:1rem;background:rgba(var(--q-primary-rgb), 0.1);border-bottom:2px solid var(--q-primary);box-shadow:inset 0 -10px 20px rgba(0,0,0,0.2)">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.75rem">
+            <h4 style="margin:0;font-size:0.9rem;color:var(--q-primary);font-weight:600;display:flex;align-items:center;gap:0.5rem">
+              <i data-lucide="calculator" style="width:16px;height:16px"></i>
+              Hasil Agregasi
+            </h4>
+            <div style="display:flex;gap:0.5rem">
+              <button class="q-btn q-btn--primary q-btn--xs" @click="downloadAggregation()">
+                <i data-lucide="download" style="width:12px;height:12px"></i> Unduh CSV
+              </button>
+              <button class="q-btn q-btn--ghost q-btn--xs" @click="aggregationResult = []">&times; Tutup</button>
+            </div>
+          </div>
+          <div class="q-table-wrap" style="max-height:200px">
+            <table class="q-table">
+              <thead>
+                <tr>
+                  <template x-for="col in aggregationColumns" :key="col">
+                    <th x-text="col"></th>
+                  </template>
+                </tr>
+              </thead>
+              <tbody>
+                <template x-for="row in aggregationResult" :key="JSON.stringify(row)">
+                  <tr>
+                    <template x-for="col in aggregationColumns" :key="col">
+                      <td x-text="row[col]"></td>
+                    </template>
+                  </tr>
+                </template>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="q-table-wrap" style="flex:1">
+        <table class="q-table">
+          <thead>
+            <tr>
+              <th>#</th>
+              <template x-for="col in displayColumns" :key="col">
+                <th x-text="col"></th>
+              </template>
+            </tr>
+          </thead>
+          <tbody>
+            <template x-for="(row, idx) in previewData" :key="idx">
+              <tr>
+                <td style="color:var(--q-text-muted)" x-text="(currentPage - 1) * pageSize + idx + 1"></td>
+                <template x-for="col in displayColumns" :key="col">
+                  <td x-text="row[col] !== null && row[col] !== '' ? row[col] : '—'" :class="{ 'cell-empty': row[col] === null || row[col] === '' }"></td>
+                </template>
+              </tr>
+            </template>
+            <tr x-show="previewData.length === 0">
+              <td colspan="100" style="text-align:center;color:var(--q-text-muted);padding:2rem;">Memuat data preview...</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <!-- Pagination -->
+      <div class="q-pagination" x-show="totalPages > 1">
+        <button class="q-pagination__btn" @click="changePage(currentPage - 1)" :disabled="currentPage === 1" data-tooltip="Sebelumnya">
+          <i data-lucide="chevron-left" style="width:14px;height:14px"></i>
+        </button>
+        
+        <template x-for="p in visiblePages" :key="p">
+            <button class="q-pagination__btn" 
+                    :class="{ 'active': currentPage === p }" 
+                    x-text="p" 
+                    @click="changePage(p)"></button>
+        </template>
+
+        <span x-show="totalPages > 5 && currentPage < totalPages - 2" style="color:var(--q-text-muted);font-size:0.8rem">…</span>
+        <button x-show="totalPages > 5 && currentPage < totalPages - 2" 
+                class="q-pagination__btn" 
+                x-text="totalPages" 
+                @click="changePage(totalPages)"></button>
+
+        <button class="q-pagination__btn" @click="changePage(currentPage + 1)" :disabled="currentPage === totalPages" data-tooltip="Selanjutnya">
+          <i data-lucide="chevron-right" style="width:14px;height:14px"></i>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- RIGHT PANEL: Tools & Settings -->
+  <div class="q-panel glass">
+    <div class="q-panel__header">
+      <div class="q-panel__title">
+        <i data-lucide="wrench" style="width:14px;height:14px;vertical-align:middle;margin-right:4px"></i>
+        Tools
+      </div>
+    </div>
+    <div class="q-panel__body">
+
+      <!-- Tabs -->
+      <div class="q-tabs">
+        <button class="q-tab active" @click="activeTab = 'datetime'" :class="{ active: activeTab === 'datetime' }">
+          <i data-lucide="clock" style="width:12px;height:12px"></i> DateTime
+        </button>
+        <button class="q-tab" @click="activeTab = 'aggregate'" :class="{ active: activeTab === 'aggregate' }">
+          <i data-lucide="sigma" style="width:12px;height:12px"></i> Agregasi
+        </button>
+        <button class="q-tab" @click="activeTab = 'compare'" :class="{ active: activeTab === 'compare' }">
+          <i data-lucide="percent" style="width:12px;height:12px"></i> Compare
+        </button>
+        <button class="q-tab" @click="activeTab = 'chart'" :class="{ active: activeTab === 'chart' }">
+          <i data-lucide="bar-chart-3" style="width:12px;height:12px"></i> Grafik
+        </button>
+      </div>
+
+      <!-- DateTime Tab -->
+      <div x-show="activeTab === 'datetime'" x-transition>
+        <div class="q-tool-group">
+          <div class="q-tool-group__title">Normalisasi Waktu</div>
+          <div style="display:flex;flex-direction:column;gap:0.75rem">
+            <div>
+              <label class="q-label">Kolom Tanggal</label>
+              <select class="q-select" x-model="tools.datetime.dateCol">
+                <option value="">Deteksi otomatis</option>
+                <template x-for="col in availableColumns" :key="col">
+                  <option :value="col" x-text="col"></option>
+                </template>
+              </select>
+            </div>
+            <div>
+              <label class="q-label">Kolom Waktu</label>
+              <select class="q-select" x-model="tools.datetime.timeCol">
+                <option value="">— Sudah tergabung —</option>
+                <template x-for="col in availableColumns" :key="col">
+                  <option :value="col" x-text="col"></option>
+                </template>
+              </select>
+            </div>
+            <div>
+              <label class="q-label">Format Output</label>
+              <select class="q-select" x-model="tools.datetime.format">
+                <option selected>YYYY-MM-DD HH:MM:SS</option>
+                <option>DD/MM/YYYY HH:MM:SS</option>
+                <option>ISO 8601</option>
+                <option>Unix Timestamp</option>
+              </select>
+            </div>
+            <label class="q-checkbox">
+              <input type="checkbox" x-model="tools.datetime.dropOriginal">
+              <span>Hapus kolom tanggal/waktu asli</span>
+            </label>
+            <button class="q-btn q-btn--primary q-btn--sm" id="btn-apply-datetime">
+              <i data-lucide="play" style="width:14px;height:14px"></i> Terapkan
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Aggregation Tab -->
+      <div x-show="activeTab === 'aggregate'" x-transition>
+        <div class="q-tool-group">
+          <div class="q-tool-group__title">Penjumlahan & Statistik</div>
+          <div style="display:flex;flex-direction:column;gap:0.75rem">
+            <div>
+              <label class="q-label">Pilih Kolom (Untuk Dihitung)</label>
+              
+              <!-- Search box -->
+              <div style="position: relative; margin-top: 0.3rem; margin-bottom: 0.5rem">
+                <i data-lucide="search" style="position: absolute; left: 8px; top: 50%; transform: translateY(-50%); width: 12px; height: 12px; color: var(--q-text-muted);"></i>
+                <input type="text" class="q-input" x-model="tools.aggregate.searchCol" placeholder="Cari kolom..." style="width: 100%; padding-left: 26px; padding-top: 0.4rem; padding-bottom: 0.4rem; font-size: 0.75rem;">
+              </div>
+
+              <div style="display:flex;flex-direction:column;gap:0.3rem;max-height:180px;overflow-y:auto;padding-right:0.5rem">
+                <template x-for="col in availableColumns.filter(c => String(c).toLowerCase().includes((tools.aggregate.searchCol || '').toLowerCase()))" :key="col">
+                  <label class="q-checkbox">
+                    <input type="checkbox" :value="col" x-model="tools.aggregate.columns"> <span x-text="col"></span>
+                  </label>
+                </template>
+                <div x-show="availableColumns.filter(c => String(c).toLowerCase().includes((tools.aggregate.searchCol || '').toLowerCase())).length === 0" style="color:var(--q-text-muted);font-size:0.75rem">Tidak ada kolom dideteksi.</div>
+              </div>
+            </div>
+            <div>
+              <label class="q-label">Jenis Agregasi</label>
+              <div style="display:flex;flex-wrap:wrap;gap:0.35rem;margin-top:0.3rem">
+                <label class="q-checkbox" style="padding:0.3rem 0.6rem;background:rgba(255,255,255,0.04);border-radius:6px">
+                  <input type="checkbox" value="SUM" x-model="tools.aggregate.types" title="Penjumlahan (Hanya Angka)"> SUM
+                </label>
+                <label class="q-checkbox" style="padding:0.3rem 0.6rem;background:rgba(255,255,255,0.04);border-radius:6px">
+                  <input type="checkbox" value="AVG" x-model="tools.aggregate.types" title="Rata-rata (Hanya Angka)"> AVG
+                </label>
+                <label class="q-checkbox" style="padding:0.3rem 0.6rem;background:rgba(255,255,255,0.04);border-radius:6px">
+                  <input type="checkbox" value="MIN" x-model="tools.aggregate.types" title="Terkecil"> MIN
+                </label>
+                <label class="q-checkbox" style="padding:0.3rem 0.6rem;background:rgba(255,255,255,0.04);border-radius:6px">
+                  <input type="checkbox" value="MAX" x-model="tools.aggregate.types" title="Terbesar"> MAX
+                </label>
+                <label class="q-checkbox" style="padding:0.3rem 0.6rem;background:rgba(255,255,255,0.04);border-radius:6px">
+                  <input type="checkbox" value="COUNT" x-model="tools.aggregate.types" title="Hitung Jumlah Kemunculan"> COUNT
+                </label>
+              </div>
+            </div>
+            <div>
+              <label class="q-label">Group By (opsional)</label>
+              <select class="q-select" x-model="tools.aggregate.groupBy">
+                <option value="">— Tidak ada —</option>
+                <template x-for="col in availableColumns" :key="col">
+                  <option :value="col" x-text="col"></option>
+                </template>
+              </select>
+            </div>
+            <button class="q-btn q-btn--primary q-btn--sm" @click="applyAggregation()">
+              <i data-lucide="calculator" style="width:14px;height:14px"></i> Hitung
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Compare Tab -->
+      <div x-show="activeTab === 'compare'" x-transition>
+        <div class="q-tool-group">
+          <div class="q-tool-group__title">Perbandingan Kolom</div>
+          <div style="display:flex;flex-direction:column;gap:0.75rem">
+            <div>
+              <label class="q-label">Kolom A</label>
+              <select class="q-select" x-model="tools.compare.colA">
+                <option value="">— Pilih Kolom —</option>
+                <template x-for="col in numericColumns" :key="col">
+                  <option :value="col" x-text="col"></option>
+                </template>
+              </select>
+            </div>
+            <div>
+              <label class="q-label">Kolom B</label>
+              <select class="q-select" x-model="tools.compare.colB">
+                <option value="">— Pilih Kolom —</option>
+                <template x-for="col in numericColumns" :key="col">
+                  <option :value="col" x-text="col"></option>
+                </template>
+              </select>
+            </div>
+            <div>
+              <label class="q-label">Kalkulasi</label>
+              <select class="q-select" x-model="tools.compare.calcType">
+                <option value="pct_diff">Persentase Selisih ((A-B)/B × 100%)</option>
+                <option value="ratio">Rasio (A/B)</option>
+                <option value="pct_contrib">Persentase Kontribusi (A/Total A × 100%)</option>
+              </select>
+            </div>
+            <div>
+              <label class="q-label">Nama Kolom Hasil</label>
+              <input type="text" class="q-input" x-model="tools.compare.resultName">
+            </div>
+            <button class="q-btn q-btn--primary q-btn--sm" @click="applyComparison()">
+              <i data-lucide="percent" style="width:14px;height:14px"></i> Hitung
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Chart Tab -->
+      <div x-show="activeTab === 'chart'" x-transition>
+        <div class="q-tool-group">
+          <div class="q-tool-group__title">Visualisasi</div>
+          <div style="display:flex;flex-direction:column;gap:0.75rem">
+            <div>
+              <label class="q-label">Sumber Data</label>
+              <select class="q-select" x-model="tools.chart.source">
+                <option value="original">Data Asli</option>
+                <option value="agregasi" x-show="aggregationResult.length > 0">Hasil Agregasi</option>
+              </select>
+            </div>
+            <div>
+              <label class="q-label">Jenis Grafik</label>
+              <select class="q-select" x-model="tools.chart.type">
+                <option value="bar">Bar Chart</option>
+                <option value="line">Line Chart</option>
+                <option value="pie">Pie Chart</option>
+              </select>
+            </div>
+            <div>
+              <label class="q-label">Kolom X (Kategori)</label>
+              <select class="q-select" x-model="tools.chart.xCol">
+                <option value="">— Pilih Kolom —</option>
+                <template x-for="col in (tools.chart.source === 'agregasi' ? aggregationColumns : availableColumns)" :key="col">
+                  <option :value="col" x-text="col"></option>
+                </template>
+              </select>
+            </div>
+            <div>
+              <label class="q-label">Kolom Y (Nilai)</label>
+              <select class="q-select" x-model="tools.chart.yCol">
+                <option value="">— Pilih Kolom —</option>
+                <template x-for="col in (tools.chart.source === 'agregasi' ? aggregationColumns : numericColumns)" :key="col">
+                  <option :value="col" x-text="col"></option>
+                </template>
+              </select>
+            </div>
+            <button class="q-btn q-btn--primary q-btn--sm" id="btn-generate-chart" @click="generateChart()">
+              <i data-lucide="bar-chart-3" style="width:14px;height:14px"></i> Generate
+            </button>
+            <!-- Chart Preview Area -->
+            <div class="glass-card" style="padding:0.75rem;margin-top:0.5rem">
+              <canvas id="chart-preview" height="180"></canvas>
+            </div>
+            <button class="q-btn q-btn--ghost q-btn--sm" id="btn-download-chart">
+              <i data-lucide="image" style="width:14px;height:14px"></i> Download PNG
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div class="q-divider"></div>
+
+      <!-- Preset Actions -->
+      <div class="q-tool-group">
+        <div class="q-tool-group__title">Preset</div>
+        <div style="display:flex;gap:0.5rem">
+          <button class="q-btn q-btn--ghost q-btn--sm" style="flex:1" id="btn-load-preset" @click="window.location.href='/presets/'">
+            <i data-lucide="folder-open" style="width:14px;height:14px"></i> Lihat
+          </button>
+          <button class="q-btn q-btn--ghost q-btn--sm" style="flex:1" id="btn-save-preset" @click="saveAsPreset()">
+            <i data-lucide="save" style="width:14px;height:14px"></i> Simpan
+          </button>
+        </div>
+      </div>
+
+      <div class="q-divider"></div>
+
+      <!-- Export Buttons -->
+      <div class="q-tool-group">
+        <div class="q-tool-group__title">Ekspor Data</div>
+
+        <!-- Sheet selector (only shows when XLSX and data exists) -->
+        <div class="q-sheet-selector" x-show="aggregationResult.length > 0 || comparisonResult.length > 0">
+          <div class="q-sheet-selector__title">Sheet Tambahan (XLSX)</div>
+          <label class="q-checkbox q-sheet-check" x-show="aggregationResult.length > 0">
+            <input type="checkbox" x-model="includeAggregation">
+            <i data-lucide="table" style="width:13px;height:13px;color:#34d399"></i>
+            <span>Agregasi</span>
+          </label>
+          <label class="q-checkbox q-sheet-check" x-show="comparisonResult.length > 0">
+            <input type="checkbox" x-model="includeComparison">
+            <i data-lucide="git-compare" style="width:13px;height:13px;color:#60a5fa"></i>
+            <span>Perbandingan</span>
+          </label>
+        </div>
+
+        <div class="q-export-group">
+          <button class="q-btn q-btn--csv" id="btn-export-csv" @click="exportData('csv')" :disabled="isExporting">
+            <i data-lucide="file-text" style="width:16px;height:16px"></i>
+            <span x-text="isExporting && exportFormat === 'csv' ? 'Mengekspor...' : 'Export CSV'"></span>
+          </button>
+          <button class="q-btn q-btn--xlsx" id="btn-export-xlsx" @click="exportData('xlsx')" :disabled="isExporting">
+            <i data-lucide="file-spreadsheet" style="width:16px;height:16px"></i>
+            <span x-text="isExporting && exportFormat === 'xlsx' ? 'Mengekspor...' : 'Export XLSX'"></span>
+          </button>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'js/workspace.js' %}?v=17"></script>
+{% endblock %}

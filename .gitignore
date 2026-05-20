@@ -1,0 +1,33 @@
+# Python/Django
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Database
+db.sqlite3
+db.sqlite3-journal
+
+# Media/Uploads
+media/
+uploads/
+
+# Environments
+.env
+.venv/
+venv/
+env/
+ENV/
+.conda/
+
+# IDEs
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS generated files
+.DS_Store
+Thumbs.db
+
+# Other
+*.log

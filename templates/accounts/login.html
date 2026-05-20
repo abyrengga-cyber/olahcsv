@@ -1,0 +1,42 @@
+{% extends 'base.html' %}
+
+{% block title %}Login{% endblock %}
+{% block navbar %}{% endblock %}
+{% block footer %}{% endblock %}
+
+{% block content %}
+<div class="q-auth">
+  <div class="q-auth__card glass-strong q-slide-up">
+    <div class="q-auth__logo">Df</div>
+    <h2 class="q-auth__title">Selamat Datang</h2>
+    <p class="q-auth__subtitle">Masuk ke akun DataForge anda</p>
+
+    {% if form.errors %}
+    <div style="background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.2);border-radius:var(--q-radius);padding:0.75rem;margin-bottom:1rem;text-align:left;font-size:0.85rem;color:#f87171">
+      <i data-lucide="alert-circle" style="width:14px;height:14px;vertical-align:middle;margin-right:4px"></i>
+      Username atau password salah.
+    </div>
+    {% endif %}
+
+    <form method="post" class="q-auth__form" id="login-form">
+      {% csrf_token %}
+      <div>
+        <label class="q-label" for="id_username">Username</label>
+        <input type="text" name="username" class="q-input" id="id_username" placeholder="Masukkan username" required autofocus>
+      </div>
+      <div>
+        <label class="q-label" for="id_password">Password</label>
+        <input type="password" name="password" class="q-input" id="id_password" placeholder="Masukkan password" required>
+      </div>
+      <button type="submit" class="q-btn q-btn--primary q-btn--lg" style="width:100%;margin-top:0.5rem" id="btn-submit-login">
+        <i data-lucide="log-in" style="width:16px;height:16px"></i>
+        Masuk
+      </button>
+    </form>
+
+    <div class="q-auth__footer">
+      Belum punya akun? <a href="/accounts/register/">Daftar sekarang</a>
+    </div>
+  </div>
+</div>
+{% endblock %}

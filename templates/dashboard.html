@@ -1,0 +1,129 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Dashboard{% endblock %}
+
+{% block content %}
+<div class="q-dashboard q-fade-in">
+
+  <!-- Hero -->
+  <div class="q-hero q-slide-up">
+    <h1 class="q-hero__title">Olah Data dengan <span class="text-gradient">Mudah & Cepat</span></h1>
+    <p class="q-hero__subtitle">Upload file CSV atau TXT, bersihkan, visualisasikan, dan ekspor — semuanya dalam satu platform.</p>
+  </div>
+
+  <!-- Upload Zone -->
+  <div class="q-section q-slide-up" style="animation-delay:0.1s">
+    {% csrf_token %}
+    <div class="q-upload-zone" id="upload-zone"
+         x-data="uploadZone()"
+         @dragover.prevent="dragover = true"
+         @dragleave.prevent="dragover = false"
+         @drop.prevent="handleDrop($event)"
+         @click="$refs.fileInput.click()"
+         :class="{ 'dragover': dragover }">
+      <span class="q-upload-zone__icon">
+        <i data-lucide="upload-cloud" style="width:48px;height:48px"></i>
+      </span>
+      <div class="q-upload-zone__title">Drag & drop file di sini</div>
+      <div class="q-upload-zone__subtitle">atau <strong style="color:var(--q-primary-light)">browse file</strong> dari komputer anda</div>
+      <div class="q-upload-zone__badge">
+        <i data-lucide="file-text" style="width:12px;height:12px"></i>
+        CSV, TXT &bull; Maks 50MB/file &bull; Maks 20 file
+      </div>
+      <input type="file" x-ref="fileInput" multiple accept=".csv,.txt" style="display:none" @change="handleFiles($event)" @click.stop>
+    </div>
+  </div>
+
+  <!-- Stats -->
+  <div class="q-section q-slide-up" style="animation-delay:0.15s">
+    <div class="q-stats-grid">
+      <div class="glass-card q-stat-card">
+        <div class="q-stat-card__icon q-stat-card__icon--purple">
+          <i data-lucide="file-text" style="width:20px;height:20px"></i>
+        </div>
+        <div class="q-stat-card__value">0</div>
+        <div class="q-stat-card__label">File Diupload</div>
+      </div>
+      <div class="glass-card q-stat-card">
+        <div class="q-stat-card__icon q-stat-card__icon--cyan">
+          <i data-lucide="columns-3" style="width:20px;height:20px"></i>
+        </div>
+        <div class="q-stat-card__value">0</div>
+        <div class="q-stat-card__label">Kolom Terproses</div>
+      </div>
+      <div class="glass-card q-stat-card">
+        <div class="q-stat-card__icon q-stat-card__icon--green">
+          <i data-lucide="download" style="width:20px;height:20px"></i>
+        </div>
+        <div class="q-stat-card__value">0</div>
+        <div class="q-stat-card__label">Ekspor Selesai</div>
+      </div>
+      <div class="glass-card q-stat-card">
+        <div class="q-stat-card__icon q-stat-card__icon--amber">
+          <i data-lucide="bookmark" style="width:20px;height:20px"></i>
+        </div>
+        <div class="q-stat-card__value">0</div>
+        <div class="q-stat-card__label">Preset Tersimpan</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Two Column: Recent Files + Preset Shortcuts -->
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.5rem;margin-top:0.5rem" class="q-slide-up" style="animation-delay:0.2s">
+    
+    <!-- Recent Files -->
+    <div class="glass-card" style="padding:0;overflow:hidden">
+      <div class="q-panel__header">
+        <div class="q-panel__title">
+          <i data-lucide="clock" style="width:14px;height:14px;vertical-align:middle;margin-right:4px"></i>
+          File Terbaru
+        </div>
+        <a href="/workspace/" class="q-section__action">Lihat semua →</a>
+      </div>
+      <div style="padding:0.75rem 1rem">
+        <div class="q-file-list">
+          <div style="text-align: center; color: var(--q-text-muted); font-size: 0.85rem; padding: 1.5rem 0;">
+            Belum ada file yang diunggah.
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Preset Shortcuts -->
+    <div class="glass-card" style="padding:0;overflow:hidden">
+      <div class="q-panel__header">
+        <div class="q-panel__title">
+          <i data-lucide="zap" style="width:14px;height:14px;vertical-align:middle;margin-right:4px"></i>
+          Preset Favorit
+        </div>
+        <a href="#" class="q-section__action">Kelola →</a>
+      </div>
+      <div style="padding:0.75rem 1rem">
+        <div class="q-file-list">
+          <div style="text-align: center; color: var(--q-text-muted); font-size: 0.85rem; padding: 1.5rem 0;">
+            Belum ada preset favorit.
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Recent Exports -->
+  <div class="q-section q-slide-up" style="animation-delay:0.25s;margin-top:1.5rem">
+    <div class="q-section__header">
+      <h3 class="q-section__title">
+        <i data-lucide="download-cloud" style="width:18px;height:18px;vertical-align:middle;margin-right:6px"></i>
+        Ekspor Terakhir
+      </h3>
+    </div>
+    <div class="glass-card" style="padding:0.75rem 1rem">
+      <div class="q-exports-list">
+        <div style="text-align: center; color: var(--q-text-muted); font-size: 0.85rem; padding: 1.5rem 0;">
+          Belum ada riwayat ekspor.
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

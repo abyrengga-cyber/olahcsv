@@ -1,0 +1,54 @@
+{% extends 'base.html' %}
+
+{% block title %}Daftar{% endblock %}
+{% block navbar %}{% endblock %}
+{% block footer %}{% endblock %}
+
+{% block content %}
+<div class="q-auth">
+  <div class="q-auth__card glass-strong q-slide-up">
+    <div class="q-auth__logo">Df</div>
+    <h2 class="q-auth__title">Buat Akun Baru</h2>
+    <p class="q-auth__subtitle">Daftar untuk mulai mengolah data anda</p>
+
+    {% if form.errors %}
+    <div style="background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.2);border-radius:var(--q-radius);padding:0.75rem;margin-bottom:1rem;text-align:left;font-size:0.85rem;color:#f87171">
+      <i data-lucide="alert-circle" style="width:14px;height:14px;vertical-align:middle;margin-right:4px"></i>
+      {% for field, errors in form.errors.items %}
+        {% for error in errors %}
+          <div>{{ error }}</div>
+        {% endfor %}
+      {% endfor %}
+    </div>
+    {% endif %}
+
+    <form method="post" class="q-auth__form" id="register-form">
+      {% csrf_token %}
+      <div>
+        <label class="q-label" for="id_username">Username</label>
+        <input type="text" name="username" class="q-input" id="id_username" placeholder="Pilih username" required autofocus>
+      </div>
+      <div>
+        <label class="q-label" for="id_email">Email</label>
+        <input type="email" name="email" class="q-input" id="id_email" placeholder="nama@email.com">
+      </div>
+      <div>
+        <label class="q-label" for="id_password1">Password</label>
+        <input type="password" name="password1" class="q-input" id="id_password1" placeholder="Minimal 8 karakter" required>
+      </div>
+      <div>
+        <label class="q-label" for="id_password2">Konfirmasi Password</label>
+        <input type="password" name="password2" class="q-input" id="id_password2" placeholder="Ulangi password" required>
+      </div>
+      <button type="submit" class="q-btn q-btn--primary q-btn--lg" style="width:100%;margin-top:0.5rem" id="btn-submit-register">
+        <i data-lucide="user-plus" style="width:16px;height:16px"></i>
+        Daftar
+      </button>
+    </form>
+
+    <div class="q-auth__footer">
+      Sudah punya akun? <a href="/accounts/login/">Masuk</a>
+    </div>
+  </div>
+</div>
+{% endblock %}

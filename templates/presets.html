@@ -1,0 +1,104 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Kelola Preset{% endblock %}
+
+{% block content %}
+<div class="q-page-header" style="margin-bottom:2rem;text-align:center">
+  <h1 class="text-gradient">Kelola Preset</h1>
+  <p style="color:var(--q-text-secondary)">Simpan dan gunakan kembali konfigurasi pemrosesan data Anda.</p>
+</div>
+
+<div class="q-container" x-data="presetManager()" x-init="fetchPresets()">
+  <div class="glass-card" style="max-width:900px;margin:0 auto">
+    
+    <div x-show="loading" style="text-align:center;padding:3rem">
+      <div class="q-spinner" style="border-top-color:var(--q-primary)"></div>
+      <p style="margin-top:1rem;color:var(--q-text-secondary)">Memuat preset...</p>
+    </div>
+
+    <template x-if="!loading && presets.length === 0">
+      <div style="text-align:center;padding:4rem">
+        <i data-lucide="bookmark-plus" style="width:48px;height:48px;color:var(--q-text-muted);margin-bottom:1rem"></i>
+        <h3>Belum ada preset tersimpan</h3>
+        <p style="color:var(--q-text-secondary);margin-top:0.5rem">Anda dapat menyimpan preset baru langsung dari halaman Workspace.</p>
+        <a href="/workspace/" class="q-btn q-btn--primary" style="margin-top:1.5rem">Buka Workspace</a>
+      </div>
+    </template>
+
+    <div x-show="!loading && presets.length > 0" class="q-file-list">
+      <template x-for="preset in presets" :key="preset.id">
+        <div class="q-file-item" style="padding:1.25rem">
+          <div class="q-file-item__icon--csv" style="width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;background:rgba(20,184,166,0.15);color:var(--q-primary)">
+            <i data-lucide="bookmark" style="width:20px;height:20px"></i>
+          </div>
+          <div class="q-file-item__info">
+            <div class="q-file-item__name" x-text="preset.name" style="font-size:1rem;font-weight:600"></div>
+            <div class="q-file-item__meta" x-text="preset.description || 'Tidak ada deskripsi'"></div>
+            <div style="margin-top:0.5rem;display:flex;gap:0.5rem">
+              <span class="q-file-item__status--ready" style="font-size:0.7rem;padding:0.15rem 0.5rem" x-text="preset.column_config.length + ' Kolom'"></span>
+              <span class="q-file-item__status--ready" style="font-size:0.7rem;padding:0.15rem 0.5rem" x-text="'Dibuat: ' + new Date(preset.created_at).toLocaleDateString()"></span>
+            </div>
+          </div>
+          <div style="display:flex;gap:0.5rem">
+            <button class="q-btn q-btn--ghost q-btn--sm" @click="deletePreset(preset.id)" :disabled="deleting === preset.id">
+              <template x-if="deleting === preset.id">
+                <span>Menghapus...</span>
+              </template>
+              <template x-if="deleting !== preset.id">
+                <i data-lucide="trash-2" style="width:16px;height:16px;color:var(--q-danger)"></i>
+              </template>
+            </button>
+          </div>
+        </div>
+      </template>
+    </div>
+  </div>
+</div>
+
+<script>
+function presetManager() {
+  return {
+    presets: [],
+    loading: true,
+    deleting: null,
+
+    async fetchPresets() {
+      try {
+        const response = await fetch('/presets/api/');
+        const data = await response.json();
+        this.presets = data;
+        this.loading = false;
+        this.$nextTick(() => lucide.createIcons());
+      } catch (e) {
+        Toast.error("Gagal memuat preset");
+        this.loading = false;
+      }
+    },
+
+    async deletePreset(id) {
+      if (!confirm("Hapus preset ini?")) return;
+      this.deleting = id;
+      try {
+        const response = await fetch(`/presets/api/${id}/`, {
+          method: 'DELETE',
+          headers: {
+            'X-CSRFToken': '{{ csrf_token }}'
+          }
+        });
+        if (response.ok) {
+          this.presets = this.presets.filter(p => p.id !== id);
+          Toast.success("Preset berhasil dihapus");
+        } else {
+          Toast.error("Gagal menghapus preset");
+        }
+      } catch (e) {
+        Toast.error("Gagal menghapus preset");
+      } finally {
+        this.deleting = null;
+      }
+    }
+  }
+}
+</script>
+{% endblock %}

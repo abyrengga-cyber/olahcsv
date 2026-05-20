@@ -1,0 +1,105 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}DataForge{% endblock %} — CSV & TXT Processor</title>
+  <meta name="description" content="DataForge: Aplikasi web untuk mengolah, membersihkan, dan mengekspor file CSV & TXT dengan antarmuka visual yang intuitif.">
+  
+  <!-- Quartz CSS -->
+  <link rel="stylesheet" href="{% static 'css/quartz.css' %}?v=5">
+  
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+  
+  <!-- Alpine.js -->
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+  
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
+  <!-- Chart.js DataLabels Plugin -->
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
+  
+  <!-- Sortable.js -->
+  <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+  
+  {% block extra_head %}{% endblock %}
+</head>
+<body>
+  <!-- Animated Background -->
+  <div class="q-background">
+    <div class="q-orb q-orb--1"></div>
+    <div class="q-orb q-orb--2"></div>
+    <div class="q-orb q-orb--3"></div>
+  </div>
+
+  {% block navbar %}
+  <!-- Navbar -->
+  <nav class="q-navbar">
+    <a href="/" class="q-navbar__brand">
+      <div class="q-navbar__logo">Df</div>
+      <div class="q-navbar__title">Data<span>Forge</span></div>
+    </a>
+
+    <ul class="q-navbar__nav">
+      <li>
+        <a href="/" class="q-navbar__link {% if request.path == '/' %}active{% endif %}" id="nav-dashboard">
+          <i data-lucide="layout-dashboard" style="width:16px;height:16px"></i>
+          Dashboard
+        </a>
+      </li>
+      <li>
+        <a href="/workspace/" class="q-navbar__link {% if 'workspace' in request.path %}active{% endif %}" id="nav-workspace">
+          <i data-lucide="table-2" style="width:16px;height:16px"></i>
+          Workspace
+        </a>
+      </li>
+      <li>
+        <a href="/presets/" class="q-navbar__link {% if 'presets' in request.path %}active{% endif %}" id="nav-presets">
+          <i data-lucide="bookmark" style="width:16px;height:16px"></i>
+          Preset
+        </a>
+      </li>
+    </ul>
+
+    <div class="q-navbar__actions">
+      {% if user.is_authenticated %}
+        <span style="font-size:0.85rem;color:var(--q-text-secondary)">
+          <i data-lucide="user" style="width:14px;height:14px;vertical-align:middle"></i>
+          {{ user.username }}
+        </span>
+        <form action="{% url 'logout' %}" method="post" style="display: inline;">
+          {% csrf_token %}
+          <button type="submit" class="q-btn q-btn--ghost q-btn--sm" id="btn-logout" style="cursor: pointer; border: none; background: transparent; color: inherit; padding: 0.5rem 1rem; font: inherit;">Logout</button>
+        </form>
+      {% else %}
+        <a href="/accounts/login/" class="q-btn q-btn--ghost q-btn--sm" id="btn-login">Login</a>
+        <a href="/accounts/register/" class="q-btn q-btn--primary q-btn--sm" id="btn-register">Daftar</a>
+      {% endif %}
+    </div>
+  </nav>
+  {% endblock %}
+
+  <!-- Toast Container -->
+  <div class="q-toast-container" id="toast-container"></div>
+
+  <!-- Main Content -->
+  <main>
+    {% block content %}{% endblock %}
+  </main>
+
+  {% block footer %}
+  <footer class="q-footer">
+    &copy; 2026 DataForge &mdash; CSV & TXT File Processing Platform
+  </footer>
+  {% endblock %}
+
+  <!-- Core JS -->
+  <script src="{% static 'js/app.js' %}?v=3"></script>
+  {% block extra_js %}{% endblock %}
+
+  <!-- Init Lucide Icons -->
+  <script>lucide.createIcons();</script>
+</body>
+</html>
