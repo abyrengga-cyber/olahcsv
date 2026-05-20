@@ -56,7 +56,7 @@
         </a>
       </li>
       <li>
-        <a href="/presets/" class="q-navbar__link {% if 'presets' in request.path %}active{% endif %}" id="nav-presets">
+        <a href="/presets/{% if request.GET.file_id %}?file_id={{ request.GET.file_id }}{% endif %}" class="q-navbar__link {% if 'presets' in request.path %}active{% endif %}" id="nav-presets">
           <i data-lucide="bookmark" style="width:16px;height:16px"></i>
           Preset
         </a>
