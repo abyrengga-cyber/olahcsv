@@ -42,28 +42,28 @@
         <div class="q-stat-card__icon q-stat-card__icon--purple">
           <i data-lucide="file-text" style="width:20px;height:20px"></i>
         </div>
-        <div class="q-stat-card__value">0</div>
+        <div class="q-stat-card__value">{{ total_files }}</div>
         <div class="q-stat-card__label">File Diupload</div>
       </div>
       <div class="glass-card q-stat-card">
         <div class="q-stat-card__icon q-stat-card__icon--cyan">
           <i data-lucide="columns-3" style="width:20px;height:20px"></i>
         </div>
-        <div class="q-stat-card__value">0</div>
+        <div class="q-stat-card__value">{{ total_columns }}</div>
         <div class="q-stat-card__label">Kolom Terproses</div>
       </div>
       <div class="glass-card q-stat-card">
         <div class="q-stat-card__icon q-stat-card__icon--green">
           <i data-lucide="download" style="width:20px;height:20px"></i>
         </div>
-        <div class="q-stat-card__value">0</div>
+        <div class="q-stat-card__value">{{ total_exports }}</div>
         <div class="q-stat-card__label">Ekspor Selesai</div>
       </div>
       <div class="glass-card q-stat-card">
         <div class="q-stat-card__icon q-stat-card__icon--amber">
           <i data-lucide="bookmark" style="width:20px;height:20px"></i>
         </div>
-        <div class="q-stat-card__value">0</div>
+        <div class="q-stat-card__value">{{ total_presets }}</div>
         <div class="q-stat-card__label">Preset Tersimpan</div>
       </div>
     </div>
@@ -83,9 +83,22 @@
       </div>
       <div style="padding:0.75rem 1rem">
         <div class="q-file-list">
+          {% for file in recent_files %}
+          <div class="q-file-item" style="padding:0.75rem 1rem">
+            <div class="q-file-item__icon--csv" style="width:32px;height:32px;border-radius:8px;display:flex;align-items:center;justify-content:center;background:rgba(20,184,166,0.15);color:var(--q-primary)">
+              <i data-lucide="file-spreadsheet" style="width:16px;height:16px"></i>
+            </div>
+            <div class="q-file-item__info">
+              <div class="q-file-item__name" style="font-size:0.9rem;font-weight:600">{{ file.original_filename }}</div>
+              <div class="q-file-item__meta" style="font-size:0.75rem;color:var(--q-text-muted)">{{ file.upload_at|date:"d M Y, H:i" }} &bull; {{ file.row_count|default:"0" }} Baris</div>
+            </div>
+            <a href="/workspace/?file_id={{ file.id }}" class="q-btn q-btn--ghost q-btn--sm" style="font-size:0.75rem">Buka</a>
+          </div>
+          {% empty %}
           <div style="text-align: center; color: var(--q-text-muted); font-size: 0.85rem; padding: 1.5rem 0;">
             Belum ada file yang diunggah.
           </div>
+          {% endfor %}
         </div>
       </div>
     </div>
@@ -101,9 +114,22 @@
       </div>
       <div style="padding:0.75rem 1rem">
         <div class="q-file-list">
+          {% for preset in recent_presets %}
+          <div class="q-file-item" style="padding:0.75rem 1rem">
+            <div class="q-file-item__icon--csv" style="width:32px;height:32px;border-radius:8px;display:flex;align-items:center;justify-content:center;background:rgba(245,158,11,0.15);color:var(--q-warning)">
+              <i data-lucide="bookmark" style="width:16px;height:16px"></i>
+            </div>
+            <div class="q-file-item__info">
+              <div class="q-file-item__name" style="font-size:0.9rem;font-weight:600">{{ preset.name }}</div>
+              <div class="q-file-item__meta" style="font-size:0.75rem;color:var(--q-text-muted)">{{ preset.created_at|date:"d M Y" }}</div>
+            </div>
+            <a href="/presets/" class="q-btn q-btn--ghost q-btn--sm" style="font-size:0.75rem">Lihat</a>
+          </div>
+          {% empty %}
           <div style="text-align: center; color: var(--q-text-muted); font-size: 0.85rem; padding: 1.5rem 0;">
             Belum ada preset favorit.
           </div>
+          {% endfor %}
         </div>
       </div>
     </div>

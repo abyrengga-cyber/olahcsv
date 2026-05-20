@@ -4,9 +4,40 @@ from django.contrib.auth import login
 from django.contrib.auth.decorators import login_required
 
 
+from apps.files.models import UploadedFile
+from apps.presets.models import Preset
+from apps.export.models import ExportJob
+from django.db.models import Sum
+
 def dashboard(request):
     """Landing page with upload zone, stats, recent files."""
-    return render(request, 'dashboard.html')
+    if not request.user.is_authenticated:
+        return render(request, 'dashboard.html', {
+            'total_files': 0, 'total_columns': 0, 'total_exports': 0, 'total_presets': 0,
+            'recent_files': [], 'recent_presets': []
+        })
+
+    user = request.user
+    recent_files = UploadedFile.objects.filter(user=user).order_by('-upload_at')[:5]
+    total_files = UploadedFile.objects.filter(user=user).count()
+    
+    col_sum = UploadedFile.objects.filter(user=user).aggregate(Sum('column_count'))['column_count__sum']
+    total_columns = col_sum if col_sum else 0
+    
+    total_presets = Preset.objects.filter(user=user).count()
+    recent_presets = Preset.objects.filter(user=user).order_by('-created_at')[:5]
+    
+    total_exports = ExportJob.objects.filter(session__user=user, status='COMPLETED').count()
+
+    context = {
+        'total_files': total_files,
+        'total_columns': total_columns,
+        'total_exports': total_exports,
+        'total_presets': total_presets,
+        'recent_files': recent_files,
+        'recent_presets': recent_presets,
+    }
+    return render(request, 'dashboard.html', context)
 
 
 @login_required
