@@ -41,7 +41,7 @@
             </div>
           </div>
           <div style="display:flex;gap:0.5rem">
-            <button class="q-btn q-btn--primary q-btn--sm" x-show="fileId" @click="applyPreset(preset.id)">
+            <button class="q-btn q-btn--primary q-btn--sm" @click="applyPreset(preset.id)">
               <i data-lucide="check" style="width:16px;height:16px"></i> Gunakan
             </button>
             <button class="q-btn q-btn--ghost q-btn--sm" @click="deletePreset(preset.id)" :disabled="deleting === preset.id">
@@ -76,6 +76,8 @@ function presetManager() {
     applyPreset(presetId) {
       if (this.fileId) {
         window.location.href = `/workspace/?file_id=${this.fileId}&preset=${presetId}`;
+      } else {
+        Toast.warning("Anda harus mengupload/memilih file dari Workspace terlebih dahulu sebelum menggunakan Preset.");
       }
     },
 
