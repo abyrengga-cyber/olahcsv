@@ -15,3 +15,14 @@ class UploadedFile(models.Model):
 
     def __str__(self):
         return f"{self.original_filename} ({self.status})"
+
+from django.db.models.signals import post_delete
+from django.dispatch import receiver
+import os
+
+@receiver(post_delete, sender=UploadedFile)
+def auto_delete_file_on_delete(sender, instance, **kwargs):
+    """Menghapus file dari filesystem ketika instance `UploadedFile` dihapus."""
+    if instance.file_path:
+        if os.path.isfile(instance.file_path.path):
+            os.remove(instance.file_path.path)

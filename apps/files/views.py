@@ -80,3 +80,15 @@ class PreviewFileView(APIView):
         if metadata['success']:
             return Response(metadata, status=status.HTTP_200_OK)
         return Response({'error': metadata['error']}, status=status.HTTP_400_BAD_REQUEST)
+
+class FileDeleteView(APIView):
+    def delete(self, request, file_id, *args, **kwargs):
+        if not request.user.is_authenticated:
+            return Response({'error': 'Unauthorized'}, status=status.HTTP_401_UNAUTHORIZED)
+        
+        try:
+            uploaded_file = UploadedFile.objects.get(id=file_id, user=request.user)
+            uploaded_file.delete()
+            return Response({'success': True}, status=status.HTTP_200_OK)
+        except UploadedFile.DoesNotExist:
+            return Response({'error': 'File not found'}, status=status.HTTP_404_NOT_FOUND)

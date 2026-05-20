@@ -93,6 +93,9 @@
               <div class="q-file-item__meta" style="font-size:0.75rem;color:var(--q-text-muted)">{{ file.upload_at|date:"d M Y, H:i" }} &bull; {{ file.row_count|default:"0" }} Baris</div>
             </div>
             <a href="/workspace/?file_id={{ file.id }}" class="q-btn q-btn--ghost q-btn--sm" style="font-size:0.75rem">Buka</a>
+            <button class="q-btn q-btn--ghost q-btn--sm" style="font-size:0.75rem;color:var(--q-danger);margin-left:0.25rem" onclick="deleteDashboardFile({{ file.id }})">
+              <i data-lucide="trash-2" style="width:12px;height:12px"></i> Hapus
+            </button>
           </div>
           {% empty %}
           <div style="text-align: center; color: var(--q-text-muted); font-size: 0.85rem; padding: 1.5rem 0;">
@@ -152,4 +155,29 @@
     </div>
   </div>
 </div>
+
+<script>
+async function deleteDashboardFile(fileId) {
+    if(!confirm("Yakin ingin menghapus file ini beserta datanya secara permanen? Kapasitas server akan dibebaskan.")) return;
+    try {
+        const csrfDoc = document.querySelector('[name=csrfmiddlewaretoken]');
+        const headers = {};
+        if (csrfDoc) headers['X-CSRFToken'] = csrfDoc.value;
+        
+        const response = await fetch(`/api/files/${fileId}/delete/`, {
+            method: 'DELETE',
+            headers: headers
+        });
+        
+        if(response.ok) {
+            window.location.reload();
+        } else {
+            const data = await response.json();
+            alert(data.error || "Gagal menghapus file.");
+        }
+    } catch(e) {
+        alert("Terjadi kesalahan jaringan.");
+    }
+}
+</script>
 {% endblock %}
