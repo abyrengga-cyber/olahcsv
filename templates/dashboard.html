@@ -145,10 +145,25 @@
       </h3>
     </div>
     <div class="glass-card" style="padding:0.75rem 1rem">
-      <div class="q-exports-list">
+      <div class="q-exports-list" style="max-height: 250px; overflow-y: auto; padding-right: 0.5rem;">
+        {% for export in recent_exports %}
+        <div class="q-file-item" style="padding:0.75rem 1rem">
+          <div class="q-file-item__icon--csv" style="width:32px;height:32px;border-radius:8px;display:flex;align-items:center;justify-content:center;background:rgba(59,130,246,0.15);color:#60a5fa">
+            <i data-lucide="download" style="width:16px;height:16px"></i>
+          </div>
+          <div class="q-file-item__info">
+            <div class="q-file-item__name" style="font-size:0.9rem;font-weight:600">{{ export.filename }}</div>
+            <div class="q-file-item__meta" style="font-size:0.75rem;color:var(--q-text-muted)">{{ export.completed_at|date:"d M Y, H:i" }} &bull; {{ export.format|upper }}</div>
+          </div>
+          {% if export.output_file %}
+          <a href="{{ export.output_file.url }}" class="q-btn q-btn--ghost q-btn--sm" style="font-size:0.75rem" target="_blank" download>Unduh</a>
+          {% endif %}
+        </div>
+        {% empty %}
         <div style="text-align: center; color: var(--q-text-muted); font-size: 0.85rem; padding: 1.5rem 0;">
           Belum ada riwayat ekspor.
         </div>
+        {% endfor %}
       </div>
     </div>
   </div>
