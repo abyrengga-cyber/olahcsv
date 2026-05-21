@@ -266,12 +266,21 @@ document.addEventListener('alpine:init', () => {
             const fileResponse = await fetch(data.url);
             const blob = await fileResponse.blob();
             
+            // Generate timestamp (YYYYMMDD_HHMMSS)
+            const now = new Date();
+            const ts = now.getFullYear().toString() +
+                       (now.getMonth() + 1).toString().padStart(2, '0') +
+                       now.getDate().toString().padStart(2, '0') + '_' +
+                       now.getHours().toString().padStart(2, '0') +
+                       now.getMinutes().toString().padStart(2, '0') +
+                       now.getSeconds().toString().padStart(2, '0');
+
             // Clean filename
             let baseName = "Data_Export";
             if (this.files[0].metadata && this.files[0].metadata.original_filename) {
                baseName = this.files[0].metadata.original_filename.split('.')[0];
             }
-            const suggestedName = `${baseName}_processed.${format}`;
+            const suggestedName = `${baseName}_${ts}.${format}`;
             
             // Try to use the modern File System Access API for "Save As" dialogue
             if (window.showSaveFilePicker) {
