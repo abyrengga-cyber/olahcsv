@@ -5,7 +5,10 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
 from django.conf import settings
+from django.utils import timezone
 from apps.files.models import UploadedFile
+from apps.processor.models import ProcessingSession
+from apps.export.models import ExportJob
 import pandas as pd
 import uuid
 
@@ -49,7 +52,11 @@ class ExportDataView(APIView):
             export_dir = os.path.join(settings.MEDIA_ROOT, 'exports')
             os.makedirs(export_dir, exist_ok=True)
 
-            output_filename = f"export_{uuid.uuid4().hex[:8]}.{export_format}"
+            # Build timestamped filename
+            now = timezone.now()
+            ts = now.strftime('%Y%m%d_%H%M%S')
+            base_name = os.path.splitext(file_obj.original_filename)[0] if file_obj.original_filename else 'Data_Export'
+            output_filename = f"{base_name}_{ts}.{export_format}"
             output_path = os.path.join(export_dir, output_filename)
             output_url = f"{settings.MEDIA_URL}exports/{output_filename}"
 
@@ -64,7 +71,6 @@ class ExportDataView(APIView):
                     # Sheet 2: Agregasi (if available and included)
                     if include_aggregation and aggregation_result and aggregation_columns:
                         agg_df = pd.DataFrame(aggregation_result)
-                        # Only keep columns that exist
                         valid_agg_cols = [c for c in aggregation_columns if c in agg_df.columns]
                         if valid_agg_cols:
                             agg_df = agg_df[valid_agg_cols]
@@ -81,6 +87,25 @@ class ExportDataView(APIView):
             else:
                 return Response({'error': 'Invalid format'}, status=status.HTTP_400_BAD_REQUEST)
 
+            # --- Record export in database for Dashboard history ---
+            try:
+                session, _ = ProcessingSession.objects.get_or_create(
+                    user=request.user,
+                    status='ACTIVE',
+                    defaults={'configuration': {}}
+                )
+                session.files.add(file_obj)
+
+                ExportJob.objects.create(
+                    session=session,
+                    format=export_format,
+                    status='COMPLETED',
+                    output_file=f"exports/{output_filename}",
+                    completed_at=now
+                )
+            except Exception:
+                pass  # Don't fail the export if logging fails
+
             # Build sheet info for response
             sheets = ['Data']
             if export_format == 'xlsx':
@@ -91,6 +116,7 @@ class ExportDataView(APIView):
 
             return Response({
                 'url': output_url,
+                'filename': output_filename,
                 'sheets': sheets
             }, status=status.HTTP_200_OK)
 
