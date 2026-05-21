@@ -28,6 +28,14 @@ def dashboard(request):
     recent_presets = Preset.objects.filter(user=user).order_by('-created_at')
     
     total_exports = ExportJob.objects.filter(session__user=user, status='COMPLETED').count()
+    
+    recent_exports = ExportJob.objects.filter(session__user=user, status='COMPLETED').order_by('-completed_at')
+    import os
+    for ex in recent_exports:
+        if ex.output_file:
+            ex.filename = os.path.basename(ex.output_file.name)
+        else:
+            ex.filename = f"Export_{ex.id}.{ex.format}"
 
     context = {
         'total_files': total_files,
@@ -36,6 +44,7 @@ def dashboard(request):
         'total_presets': total_presets,
         'recent_files': recent_files,
         'recent_presets': recent_presets,
+        'recent_exports': recent_exports,
     }
     return render(request, 'dashboard.html', context)
 
