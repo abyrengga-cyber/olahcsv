@@ -8,7 +8,7 @@
   <meta name="description" content="DataForge: Aplikasi web untuk mengolah, membersihkan, dan mengekspor file CSV & TXT dengan antarmuka visual yang intuitif.">
   
   <!-- Quartz CSS -->
-  <link rel="stylesheet" href="{% static 'css/quartz.css' %}?v=7">
+  <link rel="stylesheet" href="{% static 'css/quartz.css' %}?v=8">
   
   <!-- Lucide Icons -->
   <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
@@ -28,39 +28,42 @@
 </head>
 <body>
   {% block layout %}
-  <div class="app-wrapper" x-data="{ sidebarOpen: window.innerWidth > 992 }" @resize.window="sidebarOpen = window.innerWidth > 992">
+  <div class="app-wrapper" x-data="{ sidebarOpen: window.innerWidth > 992, isDesktop: window.innerWidth > 992 }" @resize.window="sidebarOpen = window.innerWidth > 992; isDesktop = window.innerWidth > 992">
     
     <!-- Sidebar -->
     <aside class="app-sidebar" :class="{'open': sidebarOpen}">
       <div class="app-sidebar__header">
         <a href="/" class="app-sidebar__logo">
           <div class="app-sidebar__logo-icon">Df</div>
-          DataForge
+          <span class="app-sidebar__logo-text">DataForge</span>
         </a>
       </div>
       <ul class="app-sidebar__nav">
         <li class="app-sidebar__nav-title">Dashboard</li>
         <li>
-          <a href="/" class="app-sidebar__link {% if request.path == '/' %}active{% endif %}">
-            <i data-lucide="layout-dashboard" style="width:18px;height:18px"></i> Dashboard
+          <a href="/" class="app-sidebar__link {% if request.path == '/' %}active{% endif %}" title="Dashboard">
+            <i data-lucide="layout-dashboard" style="width:18px;height:18px"></i>
+            <span class="app-sidebar__link-text">Dashboard</span>
           </a>
         </li>
         <li class="app-sidebar__nav-title">Pages</li>
         <li>
-          <a href="/workspace/" class="app-sidebar__link {% if 'workspace' in request.path %}active{% endif %}">
-            <i data-lucide="table-2" style="width:18px;height:18px"></i> Workspace
+          <a href="/workspace/" class="app-sidebar__link {% if 'workspace' in request.path %}active{% endif %}" title="Workspace">
+            <i data-lucide="table-2" style="width:18px;height:18px"></i>
+            <span class="app-sidebar__link-text">Workspace</span>
           </a>
         </li>
         <li>
-          <a href="/presets/{% if request.GET.file_id %}?file_id={{ request.GET.file_id }}{% endif %}" class="app-sidebar__link {% if 'presets' in request.path %}active{% endif %}">
-            <i data-lucide="bookmark" style="width:18px;height:18px"></i> Preset
+          <a href="/presets/{% if request.GET.file_id %}?file_id={{ request.GET.file_id }}{% endif %}" class="app-sidebar__link {% if 'presets' in request.path %}active{% endif %}" title="Preset">
+            <i data-lucide="bookmark" style="width:18px;height:18px"></i>
+            <span class="app-sidebar__link-text">Preset</span>
           </a>
         </li>
       </ul>
     </aside>
 
     <!-- Main Content -->
-    <div class="app-main">
+    <div class="app-main" :class="{'sidebar-collapsed': !sidebarOpen && isDesktop}">
       <!-- Header -->
       <header class="app-header">
         <button class="app-header__menu-btn" @click="sidebarOpen = !sidebarOpen">
