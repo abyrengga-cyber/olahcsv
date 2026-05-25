@@ -26,7 +26,7 @@
   --q-info: #00cfd5;
   
   /* Surfaces */
-  --q-bg-main: #f8f8f9;      /* main body background */
+  --q-bg-main: #e6eaf0;      /* main body background - slightly darker for contrast */
   --q-glass: #ffffff;        /* Formerly glass, now solid paper */
   --q-glass-border: #e3e8ef; /* subtle solid border */
   --q-glass-hover: #ffffff;
@@ -79,19 +79,21 @@ body {
   font-family: var(--q-font);
   color: var(--q-text);
   background-color: var(--q-bg-main);
+  background-image:
+    /* Subtle ambient glow at corners */
+    radial-gradient(ellipse at 0% 0%, rgba(51, 102, 255, 0.06) 0%, transparent 60%),
+    radial-gradient(ellipse at 100% 100%, rgba(0, 207, 213, 0.05) 0%, transparent 60%),
+    /* Dot pattern */
+    radial-gradient(circle at center, rgba(0, 0, 0, 0.06) 1px, transparent 1px);
+  background-size:
+    100% 100%,
+    100% 100%,
+    24px 24px;
   min-height: 100vh;
   overflow-x: hidden;
   line-height: 1.6;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-}
-
-/* ---- Removed Animated Background ---- */
-.q-background {
-  display: none;
-}
-.q-orb {
-  display: none;
 }
 
 /* ---- Layout Wrapper ---- */
@@ -259,16 +261,16 @@ body {
   }
 }
 
-/* ---- Glass Utilities (Converted to Materially Solid Cards) ---- */
+/* ---- Glass Utilities ---- */
 .glass {
-  background: var(--q-paper);
+  background: #ffffff;
   border: none;
   border-radius: var(--q-radius);
   box-shadow: var(--q-shadow);
 }
 
 .glass-strong {
-  background: var(--q-paper);
+  background: #ffffff;
   border: none;
   border-radius: var(--q-radius);
   box-shadow: var(--q-shadow-lg);
