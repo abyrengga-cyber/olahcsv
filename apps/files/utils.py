@@ -126,12 +126,11 @@ def parse_file_metadata(
                 {"name": col, "type": col_type, "missing_pct": missing_pct}
             )
 
-        # Calculate complete rows percentage (based on sample for performance)
-        complete_rows_count = df_sample.dropna().shape[0]
+        # Calculate cell-level completeness percentage (more accurate than dropna())
+        total_cells = df_sample.size
+        filled_cells = int(df_sample.count().sum())
         complete_rows_pct = (
-            round((complete_rows_count / len(df_sample)) * 100, 1)
-            if len(df_sample) > 0
-            else 100.0
+            round((filled_cells / total_cells) * 100, 1) if total_cells > 0 else 100.0
         )
 
         # Get preview data for current page
