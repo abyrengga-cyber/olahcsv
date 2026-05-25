@@ -143,22 +143,19 @@
             <tr>
               <th>#</th>
               <template x-for="col in displayColumns" :key="col">
-                <th x-text="col"></th>
+                <th @click="toggleSort(col)" style="cursor:pointer;user-select:none" class="q-th-sortable">
+                  <span x-text="col"></span>
+                  <template x-if="sortColumn === col">
+                    <span x-text="sortOrder === 'asc' ? ' ▲' : ' ▼'" style="font-size:0.65rem"></span>
+                  </template>
+                  <template x-if="sortColumn !== col">
+                    <span style="font-size:0.65rem;opacity:0.25"> ⇅</span>
+                  </template>
+                </th>
               </template>
             </tr>
           </thead>
-          <tbody>
-            <template x-for="(row, idx) in previewData" :key="idx">
-              <tr>
-                <td style="color:var(--q-text-muted)" x-text="(currentPage - 1) * pageSize + idx + 1"></td>
-                <template x-for="col in displayColumns" :key="col">
-                  <td x-text="row[col] !== null && row[col] !== '' ? row[col] : '—'" :class="{ 'cell-empty': row[col] === null || row[col] === '' }"></td>
-                </template>
-              </tr>
-            </template>
-            <tr x-show="previewData.length === 0">
-              <td colspan="100" style="text-align:center;color:var(--q-text-muted);padding:2rem;">Memuat data preview...</td>
-            </tr>
+          <tbody x-html="tableRowsHtml">
           </tbody>
         </table>
       </div>

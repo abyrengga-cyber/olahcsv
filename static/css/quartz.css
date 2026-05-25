@@ -773,6 +773,11 @@ h4 { font-size: 1.25rem; }
   white-space: nowrap;
 }
 
+.q-th-sortable:hover {
+  background: #eef2f7;
+  color: var(--q-primary);
+}
+
 .q-table td {
   padding: 0.85rem 1rem;
   border-bottom: 1px solid var(--q-glass-border);

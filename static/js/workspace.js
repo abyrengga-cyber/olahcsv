@@ -17,6 +17,10 @@ document.addEventListener('alpine:init', () => {
 
     currentPage: 1,
     pageSize: 20,
+    sortColumn: null,
+    sortOrder: null,
+    sortVersion: 0,
+    tableRowsHtml: '',
 
     aggregationResult: [],
     aggregationColumns: [],
@@ -76,6 +80,63 @@ document.addEventListener('alpine:init', () => {
         }
       }
       return pages;
+    },
+
+    toggleSort(colName) {
+      let order;
+      if (this.sortColumn === colName) {
+        if (this.sortOrder === 'asc') {
+          order = 'desc';
+        } else {
+          this.loadPreview(this.currentPage);
+          return;
+        }
+      } else {
+        order = 'asc';
+      }
+      this.sortColumn = colName;
+      this.sortOrder = order;
+      this.sortVersion++;
+      this._fetchSortedPreview();
+    },
+
+    async _fetchSortedPreview() {
+      if (!this.fileId || !this.sortColumn) return;
+      try {
+        const response = await fetch(`/api/files/${this.fileId}/preview/?page=${this.currentPage}&page_size=${this.pageSize}&sort_by=${encodeURIComponent(this.sortColumn)}&sort_order=${this.sortOrder}`);
+        const data = await response.json();
+        if (response.ok) {
+          this.previewData = data.preview || [];
+          this.totalRows = data.row_count;
+          this.quality = data.quality || { complete_rows_pct: 100, problematic_cols_count: 0 };
+          this._renderRows();
+        }
+      } catch (e) {
+        console.error(e);
+      }
+    },
+
+    _renderRows() {
+      const data = this.previewData;
+      const cols = this.displayColumns;
+      if (!data || data.length === 0) {
+        this.tableRowsHtml = '<tr><td colspan="100" style="text-align:center;color:var(--q-text-muted);padding:2rem;">Memuat data preview...</td></tr>';
+        return;
+      }
+      let html = '';
+      data.forEach((row, idx) => {
+        const rowNum = (this.currentPage - 1) * this.pageSize + idx + 1;
+        html += '<tr>';
+        html += `<td style="color:var(--q-text-muted)">${rowNum}</td>`;
+        cols.forEach(col => {
+          let val = row[col];
+          if (val === null || val === undefined || val === '') val = '\u2014';
+          const cls = (row[col] === null || row[col] === undefined || row[col] === '') ? ' class="cell-empty"' : '';
+          html += `<td${cls}>${String(val).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}</td>`;
+        });
+        html += '</tr>';
+      });
+      this.tableRowsHtml = html;
     },
 
     async init() {
@@ -146,6 +207,9 @@ document.addEventListener('alpine:init', () => {
     async loadPreview(page = 1) {
       try {
         this.currentPage = page;
+        this.sortColumn = null;
+        this.sortOrder = null;
+        this.sortVersion = 0;
         const response = await fetch(`/api/files/${this.fileId}/preview/?page=${page}&page_size=${this.pageSize}`);
         const data = await response.json();
         
@@ -176,6 +240,7 @@ document.addEventListener('alpine:init', () => {
           this.quality = data.quality || { complete_rows_pct: 100, problematic_cols_count: 0 };
           this.refreshColumnLists();
           this.updateDisplayColumns();
+          this._renderRows();
         } else {
           Toast.error(data.error || "Gagal memuat preview data");
         }
@@ -198,6 +263,7 @@ document.addEventListener('alpine:init', () => {
           .filter(c => c.selected)
           .map(c => c.name);
       }
+      this._renderRows();
     },
 
     selectAll() {
