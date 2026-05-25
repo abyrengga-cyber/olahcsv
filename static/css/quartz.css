@@ -140,13 +140,9 @@ body {
 .app-sidebar__logo-icon {
   width: 32px;
   height: 32px;
-  background: var(--q-primary);
-  color: white;
   border-radius: 8px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 1rem;
+  object-fit: contain;
+  flex-shrink: 0;
 }
 
 .app-sidebar__nav {
