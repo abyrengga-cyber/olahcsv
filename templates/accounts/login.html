@@ -1,15 +1,21 @@
 {% extends 'base.html' %}
 
 {% block title %}Login{% endblock %}
-{% block navbar %}{% endblock %}
-{% block footer %}{% endblock %}
 
-{% block content %}
-<div class="q-auth">
-  <div class="q-auth__card glass-strong q-slide-up">
-    <div class="q-auth__logo">Df</div>
-    <h2 class="q-auth__title">Selamat Datang</h2>
-    <p class="q-auth__subtitle">Masuk ke akun DataForge anda</p>
+{% block layout %}
+<div style="min-height: 100vh; display: flex; align-items: center; justify-content: center; background-color: #12171e; padding: 2rem;">
+  <!-- Materially Dark Login Layout -->
+  <div class="q-auth__card glass-card q-slide-up" style="max-width: 450px; width: 100%;text-align: center;">
+    
+    <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 2rem;text-align:left;">
+      <div>
+        <h2 style="font-size: 2rem; color: var(--q-text); margin-bottom: 0.25rem;">Sign in</h2>
+        <p style="color: var(--q-text-secondary); font-size: 0.875rem;">To keep connected with us.</p>
+      </div>
+      <div style="width: 48px; height: 48px; background: var(--q-primary); border-radius: 12px; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; font-size: 1.5rem;">
+        Df
+      </div>
+    </div>
 
     {% if form.errors %}
     <div style="background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.2);border-radius:var(--q-radius);padding:0.75rem;margin-bottom:1rem;text-align:left;font-size:0.85rem;color:#f87171">
@@ -18,25 +24,27 @@
     </div>
     {% endif %}
 
-    <form method="post" class="q-auth__form" id="login-form">
+    <form method="post" class="q-auth__form" id="login-form" style="text-align: left;">
       {% csrf_token %}
-      <div>
+      <div style="margin-bottom: 1.25rem;">
         <label class="q-label" for="id_username">Username</label>
         <input type="text" name="username" class="q-input" id="id_username" placeholder="Masukkan username" required autofocus>
       </div>
-      <div>
+      <div style="margin-bottom: 1.5rem;">
         <label class="q-label" for="id_password">Password</label>
         <input type="password" name="password" class="q-input" id="id_password" placeholder="Masukkan password" required>
       </div>
-      <button type="submit" class="q-btn q-btn--primary q-btn--lg" style="width:100%;margin-top:0.5rem" id="btn-submit-login">
-        <i data-lucide="log-in" style="width:16px;height:16px"></i>
+      <button type="submit" class="q-btn q-btn--primary q-btn--lg" style="width:100%;" id="btn-submit-login">
         Masuk
       </button>
     </form>
 
-    <div class="q-auth__footer">
-      Belum punya akun? <a href="/accounts/register/">Daftar sekarang</a>
+    <div style="margin-top: 1.5rem; text-align: left;">
+      <a href="/accounts/register/" style="color: var(--q-primary); text-decoration: none; font-size: 0.875rem; font-weight: 500;">Create new account</a>
     </div>
   </div>
+
+  <!-- Toast Container -->
+  <div class="q-toast-container" id="toast-container" style="position:fixed;top:20px;right:2rem;z-index:9999;"></div>
 </div>
 {% endblock %}

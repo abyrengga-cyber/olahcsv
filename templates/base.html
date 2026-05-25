@@ -8,7 +8,7 @@
   <meta name="description" content="DataForge: Aplikasi web untuk mengolah, membersihkan, dan mengekspor file CSV & TXT dengan antarmuka visual yang intuitif.">
   
   <!-- Quartz CSS -->
-  <link rel="stylesheet" href="{% static 'css/quartz.css' %}?v=5">
+  <link rel="stylesheet" href="{% static 'css/quartz.css' %}?v=6">
   
   <!-- Lucide Icons -->
   <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
@@ -27,72 +27,78 @@
   {% block extra_head %}{% endblock %}
 </head>
 <body>
-  <!-- Animated Background -->
-  <div class="q-background">
-    <div class="q-orb q-orb--1"></div>
-    <div class="q-orb q-orb--2"></div>
-    <div class="q-orb q-orb--3"></div>
-  </div>
-
-  {% block navbar %}
-  <!-- Navbar -->
-  <nav class="q-navbar">
-    <a href="/" class="q-navbar__brand">
-      <div class="q-navbar__logo">Df</div>
-      <div class="q-navbar__title">Data<span>Forge</span></div>
-    </a>
-
-    <ul class="q-navbar__nav">
-      <li>
-        <a href="/" class="q-navbar__link {% if request.path == '/' %}active{% endif %}" id="nav-dashboard">
-          <i data-lucide="layout-dashboard" style="width:16px;height:16px"></i>
-          Dashboard
+  {% block layout %}
+  <div class="app-wrapper" x-data="{ sidebarOpen: window.innerWidth > 992 }" @resize.window="sidebarOpen = window.innerWidth > 992">
+    
+    <!-- Sidebar -->
+    <aside class="app-sidebar" :class="{'open': sidebarOpen}">
+      <div class="app-sidebar__header">
+        <a href="/" class="app-sidebar__logo">
+          <div class="app-sidebar__logo-icon">Df</div>
+          DataForge
         </a>
-      </li>
-      <li>
-        <a href="/workspace/" class="q-navbar__link {% if 'workspace' in request.path %}active{% endif %}" id="nav-workspace">
-          <i data-lucide="table-2" style="width:16px;height:16px"></i>
-          Workspace
-        </a>
-      </li>
-      <li>
-        <a href="/presets/{% if request.GET.file_id %}?file_id={{ request.GET.file_id }}{% endif %}" class="q-navbar__link {% if 'presets' in request.path %}active{% endif %}" id="nav-presets">
-          <i data-lucide="bookmark" style="width:16px;height:16px"></i>
-          Preset
-        </a>
-      </li>
-    </ul>
+      </div>
+      <ul class="app-sidebar__nav">
+        <li class="app-sidebar__nav-title">Dashboard</li>
+        <li>
+          <a href="/" class="app-sidebar__link {% if request.path == '/' %}active{% endif %}">
+            <i data-lucide="layout-dashboard" style="width:18px;height:18px"></i> Dashboard
+          </a>
+        </li>
+        <li class="app-sidebar__nav-title">Pages</li>
+        <li>
+          <a href="/workspace/" class="app-sidebar__link {% if 'workspace' in request.path %}active{% endif %}">
+            <i data-lucide="table-2" style="width:18px;height:18px"></i> Workspace
+          </a>
+        </li>
+        <li>
+          <a href="/presets/{% if request.GET.file_id %}?file_id={{ request.GET.file_id }}{% endif %}" class="app-sidebar__link {% if 'presets' in request.path %}active{% endif %}">
+            <i data-lucide="bookmark" style="width:18px;height:18px"></i> Preset
+          </a>
+        </li>
+      </ul>
+    </aside>
 
-    <div class="q-navbar__actions">
-      {% if user.is_authenticated %}
-        <span style="font-size:0.85rem;color:var(--q-text-secondary)">
-          <i data-lucide="user" style="width:14px;height:14px;vertical-align:middle"></i>
-          {{ user.username }}
-        </span>
-        <form action="{% url 'logout' %}" method="post" style="display: inline;">
-          {% csrf_token %}
-          <button type="submit" class="q-btn q-btn--ghost q-btn--sm" id="btn-logout" style="cursor: pointer; border: none; background: transparent; color: inherit; padding: 0.5rem 1rem; font: inherit;">Logout</button>
-        </form>
-      {% else %}
-        <a href="/accounts/login/" class="q-btn q-btn--ghost q-btn--sm" id="btn-login">Login</a>
-        <a href="/accounts/register/" class="q-btn q-btn--primary q-btn--sm" id="btn-register">Daftar</a>
-      {% endif %}
+    <!-- Main Content -->
+    <div class="app-main">
+      <!-- Header -->
+      <header class="app-header">
+        <button class="app-header__menu-btn" @click="sidebarOpen = !sidebarOpen">
+          <i data-lucide="menu"></i>
+        </button>
+        <div style="flex-grow:1"></div>
+        <div class="app-header__right">
+          {% if user.is_authenticated %}
+            <span style="font-size:0.875rem;color:var(--q-text-secondary);font-weight:500;">
+              <i data-lucide="user" style="width:16px;height:16px;vertical-align:middle;margin-right:4px;"></i>
+              {{ user.username }}
+            </span>
+            <form action="{% url 'logout' %}" method="post" style="display: inline;">
+              {% csrf_token %}
+              <button type="submit" class="q-btn q-btn--ghost q-btn--sm" style="box-shadow:none;border-color:var(--q-glass-border);">Logout</button>
+            </form>
+          {% else %}
+            <a href="/accounts/login/" class="q-btn q-btn--ghost q-btn--sm" style="box-shadow:none;border-color:var(--q-glass-border);">Login</a>
+            <a href="/accounts/register/" class="q-btn q-btn--primary q-btn--sm">Daftar</a>
+          {% endif %}
+        </div>
+      </header>
+
+      <!-- Content -->
+      <main class="app-content">
+        <!-- Toast Container -->
+        <div class="q-toast-container" id="toast-container" style="position:fixed;top:80px;right:2rem;z-index:9999;"></div>
+
+        {% block content %}{% endblock %}
+
+        {% block footer %}
+        <footer class="q-footer" style="text-align:center;padding:2rem 0;color:var(--q-text-muted);font-size:0.875rem;margin-top:2rem;">
+          &copy; 2026 DataForge &mdash; CSV & TXT File Processing Platform
+        </footer>
+        {% endblock %}
+      </main>
     </div>
-  </nav>
-  {% endblock %}
-
-  <!-- Toast Container -->
-  <div class="q-toast-container" id="toast-container"></div>
-
-  <!-- Main Content -->
-  <main>
-    {% block content %}{% endblock %}
-  </main>
-
-  {% block footer %}
-  <footer class="q-footer">
-    &copy; 2026 DataForge &mdash; CSV & TXT File Processing Platform
-  </footer>
+  </div>
   {% endblock %}
 
   <!-- Core JS -->

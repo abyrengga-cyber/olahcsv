@@ -7,93 +7,126 @@
 <div class="q-dashboard q-fade-in">
 
   <!-- Hero -->
-  <div class="q-hero q-slide-up">
-    <h1 class="q-hero__title">Olah Data dengan <span class="text-gradient">Mudah & Cepat</span></h1>
-    <p class="q-hero__subtitle">Upload file CSV atau TXT, bersihkan, visualisasikan, dan ekspor — semuanya dalam satu platform.</p>
+  <div class="q-hero q-slide-up" style="margin-bottom: 2rem;">
+    <h1 style="font-size: 2rem; color: var(--q-text); font-weight: 600; margin-bottom: 0.5rem;">Dashboard</h1>
+    <p style="color: var(--q-text-secondary); font-size: 0.875rem;">Olah Data CSV/TXT dengan Mudah & Cepat</p>
   </div>
 
-  <!-- Upload Zone -->
-  <div class="q-section q-slide-up" style="animation-delay:0.1s">
+  <!-- Upload Zone (keeping minimal for now, will remove glass styles) -->
+  <div class="q-section q-slide-up" style="animation-delay:0.1s; margin-bottom: 2rem;">
     {% csrf_token %}
     <div class="q-upload-zone" id="upload-zone"
+         style="background: white; border: 2px dashed #b5b5c3; color: var(--q-text-secondary);"
          x-data="uploadZone()"
          @dragover.prevent="dragover = true"
          @dragleave.prevent="dragover = false"
          @drop.prevent="handleDrop($event)"
          @click="$refs.fileInput.click()"
          :class="{ 'dragover': dragover }">
-      <span class="q-upload-zone__icon">
+      <span class="q-upload-zone__icon" style="color: var(--q-primary);">
         <i data-lucide="upload-cloud" style="width:48px;height:48px"></i>
       </span>
-      <div class="q-upload-zone__title">Drag & drop file di sini</div>
-      <div class="q-upload-zone__subtitle">atau <strong style="color:var(--q-primary-light)">browse file</strong> dari komputer anda</div>
-      <div class="q-upload-zone__badge">
-        <i data-lucide="file-text" style="width:12px;height:12px"></i>
-        CSV, TXT &bull; Maks 50MB/file &bull; Maks 20 file
-      </div>
+      <div class="q-upload-zone__title" style="color: var(--q-text);">Drag & drop file di sini</div>
+      <div class="q-upload-zone__subtitle">atau <strong style="color:var(--q-primary)">browse file</strong> dari komputer anda</div>
       <input type="file" x-ref="fileInput" multiple accept=".csv,.txt" style="display:none" @change="handleFiles($event)" @click.stop>
     </div>
   </div>
 
   <!-- Stats -->
-  <div class="q-section q-slide-up" style="animation-delay:0.15s">
+  <div class="q-section q-slide-up" style="animation-delay:0.15s; margin-bottom: 2rem;">
     <div class="q-stats-grid">
-      <div class="glass-card q-stat-card">
-        <div class="q-stat-card__icon q-stat-card__icon--purple">
-          <i data-lucide="file-text" style="width:20px;height:20px"></i>
+      <!-- Card 1 -->
+      <div class="q-stat-card q-stat-card--primary">
+        <div class="q-stat-card__content">
+          <div class="q-stat-card__data">
+            <div class="q-stat-card__value">{{ total_files }}</div>
+            <div class="q-stat-card__label">File Diupload</div>
+          </div>
+          <div class="q-stat-card__icon-container">
+            <i data-lucide="file-text"></i>
+          </div>
         </div>
-        <div class="q-stat-card__value">{{ total_files }}</div>
-        <div class="q-stat-card__label">File Diupload</div>
+        <div class="q-stat-card__footer">
+          <span>Total raw data files</span>
+          <i data-lucide="trending-up" style="width:16px;height:16px;"></i>
+        </div>
       </div>
-      <div class="glass-card q-stat-card">
-        <div class="q-stat-card__icon q-stat-card__icon--cyan">
-          <i data-lucide="columns-3" style="width:20px;height:20px"></i>
+      
+      <!-- Card 2 -->
+      <div class="q-stat-card q-stat-card--warning">
+        <div class="q-stat-card__content">
+          <div class="q-stat-card__data">
+            <div class="q-stat-card__value">{{ total_columns }}</div>
+            <div class="q-stat-card__label">Kolom Terproses</div>
+          </div>
+          <div class="q-stat-card__icon-container">
+            <i data-lucide="columns-3"></i>
+          </div>
         </div>
-        <div class="q-stat-card__value">{{ total_columns }}</div>
-        <div class="q-stat-card__label">Kolom Terproses</div>
+        <div class="q-stat-card__footer">
+          <span>Processed variables</span>
+          <i data-lucide="activity" style="width:16px;height:16px;"></i>
+        </div>
       </div>
-      <div class="glass-card q-stat-card">
-        <div class="q-stat-card__icon q-stat-card__icon--green">
-          <i data-lucide="download" style="width:20px;height:20px"></i>
+
+      <!-- Card 3 -->
+      <div class="q-stat-card q-stat-card--success">
+        <div class="q-stat-card__content">
+          <div class="q-stat-card__data">
+            <div class="q-stat-card__value">{{ total_exports }}</div>
+            <div class="q-stat-card__label">Ekspor Selesai</div>
+          </div>
+          <div class="q-stat-card__icon-container">
+            <i data-lucide="download"></i>
+          </div>
         </div>
-        <div class="q-stat-card__value">{{ total_exports }}</div>
-        <div class="q-stat-card__label">Ekspor Selesai</div>
+        <div class="q-stat-card__footer">
+          <span>Generated reports</span>
+          <i data-lucide="trending-up" style="width:16px;height:16px;"></i>
+        </div>
       </div>
-      <div class="glass-card q-stat-card">
-        <div class="q-stat-card__icon q-stat-card__icon--amber">
-          <i data-lucide="bookmark" style="width:20px;height:20px"></i>
+
+      <!-- Card 4 -->
+      <div class="q-stat-card q-stat-card--error">
+        <div class="q-stat-card__content">
+          <div class="q-stat-card__data">
+            <div class="q-stat-card__value">{{ total_presets }}</div>
+            <div class="q-stat-card__label">Preset Tersimpan</div>
+          </div>
+          <div class="q-stat-card__icon-container">
+            <i data-lucide="bookmark"></i>
+          </div>
         </div>
-        <div class="q-stat-card__value">{{ total_presets }}</div>
-        <div class="q-stat-card__label">Preset Tersimpan</div>
+        <div class="q-stat-card__footer">
+          <span>Saved configurations</span>
+          <i data-lucide="zap" style="width:16px;height:16px;"></i>
+        </div>
       </div>
     </div>
   </div>
 
   <!-- Two Column: Recent Files + Preset Shortcuts -->
-  <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.5rem;margin-top:0.5rem" class="q-slide-up" style="animation-delay:0.2s">
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.5rem;margin-top:0.5rem;animation-delay:0.2s" class="q-slide-up">
     
     <!-- Recent Files -->
     <div class="glass-card" style="padding:0;overflow:hidden">
-      <div class="q-panel__header">
-        <div class="q-panel__title">
-          <i data-lucide="clock" style="width:14px;height:14px;vertical-align:middle;margin-right:4px"></i>
-          File Anda
-        </div>
+      <div style="padding:1.5rem;border-bottom:1px solid var(--q-glass-border);">
+        <h4 style="font-size:1rem;color:var(--q-text);font-weight:600;margin:0;">File Anda</h4>
       </div>
-      <div style="padding:0.75rem 1rem">
-        <div class="q-file-list" style="max-height: 250px; overflow-y: auto; padding-right: 0.5rem;">
+      <div style="padding:1rem">
+        <div class="q-file-list" style="max-height: 250px; overflow-y: auto;">
           {% for file in recent_files %}
-          <div class="q-file-item" style="padding:0.75rem 1rem">
-            <div class="q-file-item__icon--csv" style="width:32px;height:32px;border-radius:8px;display:flex;align-items:center;justify-content:center;background:rgba(20,184,166,0.15);color:var(--q-primary)">
-              <i data-lucide="file-spreadsheet" style="width:16px;height:16px"></i>
+          <div class="q-file-item" style="padding:0.75rem 1rem;background:transparent;border-bottom:1px solid var(--q-glass-border);border-radius:0;">
+            <div style="width:36px;height:36px;border-radius:8px;display:flex;align-items:center;justify-content:center;background:rgba(51,102,255,0.1);color:var(--q-primary)">
+              <i data-lucide="file-spreadsheet" style="width:18px;height:18px"></i>
             </div>
             <div class="q-file-item__info">
-              <div class="q-file-item__name" style="font-size:0.9rem;font-weight:600">{{ file.original_filename }}</div>
+              <div class="q-file-item__name" style="font-size:0.875rem;font-weight:600;color:var(--q-text)">{{ file.original_filename }}</div>
               <div class="q-file-item__meta" style="font-size:0.75rem;color:var(--q-text-muted)">{{ file.upload_at|date:"d M Y, H:i" }} &bull; {{ file.row_count|default:"0" }} Baris</div>
             </div>
-            <a href="/workspace/?file_id={{ file.id }}" class="q-btn q-btn--ghost q-btn--sm" style="font-size:0.75rem">Buka</a>
-            <button class="q-btn q-btn--ghost q-btn--sm" style="font-size:0.75rem;color:var(--q-danger);margin-left:0.25rem" onclick="deleteDashboardFile({{ file.id }})">
-              <i data-lucide="trash-2" style="width:12px;height:12px"></i> Hapus
+            <a href="/workspace/?file_id={{ file.id }}" class="q-btn q-btn--ghost q-btn--sm" style="font-size:0.75rem;border-color:var(--q-glass-border);">Buka</a>
+            <button class="q-btn q-btn--ghost q-btn--sm" style="font-size:0.75rem;color:var(--q-danger);margin-left:0.25rem;border-color:var(--q-glass-border);" onclick="deleteDashboardFile({{ file.id }})">
+              <i data-lucide="trash-2" style="width:14px;height:14px"></i>
             </button>
           </div>
           {% empty %}
@@ -107,24 +140,21 @@
 
     <!-- Preset Shortcuts -->
     <div class="glass-card" style="padding:0;overflow:hidden">
-      <div class="q-panel__header">
-        <div class="q-panel__title">
-          <i data-lucide="zap" style="width:14px;height:14px;vertical-align:middle;margin-right:4px"></i>
-          Daftar Preset
-        </div>
+      <div style="padding:1.5rem;border-bottom:1px solid var(--q-glass-border);">
+        <h4 style="font-size:1rem;color:var(--q-text);font-weight:600;margin:0;">Daftar Preset</h4>
       </div>
-      <div style="padding:0.75rem 1rem">
-        <div class="q-file-list" style="max-height: 250px; overflow-y: auto; padding-right: 0.5rem;">
+      <div style="padding:1rem">
+        <div class="q-file-list" style="max-height: 250px; overflow-y: auto;">
           {% for preset in recent_presets %}
-          <div class="q-file-item" style="padding:0.75rem 1rem">
-            <div class="q-file-item__icon--csv" style="width:32px;height:32px;border-radius:8px;display:flex;align-items:center;justify-content:center;background:rgba(245,158,11,0.15);color:var(--q-warning)">
-              <i data-lucide="bookmark" style="width:16px;height:16px"></i>
+          <div class="q-file-item" style="padding:0.75rem 1rem;background:transparent;border-bottom:1px solid var(--q-glass-border);border-radius:0;">
+            <div style="width:36px;height:36px;border-radius:8px;display:flex;align-items:center;justify-content:center;background:rgba(244,161,0,0.1);color:var(--q-warning)">
+              <i data-lucide="bookmark" style="width:18px;height:18px"></i>
             </div>
             <div class="q-file-item__info">
-              <div class="q-file-item__name" style="font-size:0.9rem;font-weight:600">{{ preset.name }}</div>
+              <div class="q-file-item__name" style="font-size:0.875rem;font-weight:600;color:var(--q-text)">{{ preset.name }}</div>
               <div class="q-file-item__meta" style="font-size:0.75rem;color:var(--q-text-muted)">{{ preset.created_at|date:"d M Y" }}</div>
             </div>
-            <a href="/presets/" class="q-btn q-btn--ghost q-btn--sm" style="font-size:0.75rem">Lihat</a>
+            <a href="/presets/" class="q-btn q-btn--ghost q-btn--sm" style="font-size:0.75rem;border-color:var(--q-glass-border);">Lihat</a>
           </div>
           {% empty %}
           <div style="text-align: center; color: var(--q-text-muted); font-size: 0.85rem; padding: 1.5rem 0;">
@@ -137,26 +167,23 @@
   </div>
 
   <!-- Recent Exports -->
-  <div class="q-section q-slide-up" style="animation-delay:0.25s;margin-top:1.5rem">
-    <div class="q-section__header">
-      <h3 class="q-section__title">
-        <i data-lucide="download-cloud" style="width:18px;height:18px;vertical-align:middle;margin-right:6px"></i>
-        Ekspor Terakhir
-      </h3>
+  <div class="glass-card q-slide-up" style="animation-delay:0.25s;margin-top:1.5rem;padding:0;overflow:hidden;">
+    <div style="padding:1.5rem;border-bottom:1px solid var(--q-glass-border);">
+      <h4 style="font-size:1rem;color:var(--q-text);font-weight:600;margin:0;">Ekspor Terakhir</h4>
     </div>
-    <div class="glass-card" style="padding:0.75rem 1rem">
-      <div class="q-exports-list" style="max-height: 250px; overflow-y: auto; padding-right: 0.5rem;">
+    <div style="padding:1rem">
+      <div class="q-exports-list" style="max-height: 250px; overflow-y: auto;">
         {% for export in recent_exports %}
-        <div class="q-file-item" style="padding:0.75rem 1rem">
-          <div class="q-file-item__icon--csv" style="width:32px;height:32px;border-radius:8px;display:flex;align-items:center;justify-content:center;background:rgba(59,130,246,0.15);color:#60a5fa">
-            <i data-lucide="download" style="width:16px;height:16px"></i>
+        <div class="q-file-item" style="padding:0.75rem 1rem;background:transparent;border-bottom:1px solid var(--q-glass-border);border-radius:0;">
+          <div style="width:36px;height:36px;border-radius:8px;display:flex;align-items:center;justify-content:center;background:rgba(0,172,105,0.1);color:var(--q-success)">
+            <i data-lucide="download" style="width:18px;height:18px"></i>
           </div>
           <div class="q-file-item__info">
-            <div class="q-file-item__name" style="font-size:0.9rem;font-weight:600">{{ export.filename }}</div>
+            <div class="q-file-item__name" style="font-size:0.875rem;font-weight:600;color:var(--q-text)">{{ export.filename }}</div>
             <div class="q-file-item__meta" style="font-size:0.75rem;color:var(--q-text-muted)">{{ export.completed_at|date:"d M Y, H:i" }} &bull; {{ export.format|upper }}</div>
           </div>
           {% if export.output_file %}
-          <a href="{{ export.output_file.url }}" class="q-btn q-btn--ghost q-btn--sm" style="font-size:0.75rem" target="_blank" download>Unduh</a>
+          <a href="{{ export.output_file.url }}" class="q-btn q-btn--ghost q-btn--sm" style="font-size:0.75rem;border-color:var(--q-glass-border);" target="_blank" download>Unduh</a>
           {% endif %}
         </div>
         {% empty %}
