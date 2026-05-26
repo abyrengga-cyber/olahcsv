@@ -79,16 +79,11 @@ body {
   font-family: var(--q-font);
   color: var(--q-text);
   background-color: var(--q-bg-main);
-  background-image:
-    /* Subtle ambient glow at corners */
-    radial-gradient(ellipse at 0% 0%, rgba(51, 102, 255, 0.06) 0%, transparent 60%),
-    radial-gradient(ellipse at 100% 100%, rgba(0, 207, 213, 0.05) 0%, transparent 60%),
-    /* Dot pattern */
-    radial-gradient(circle at center, rgba(0, 0, 0, 0.06) 1px, transparent 1px);
-  background-size:
-    100% 100%,
-    100% 100%,
-    24px 24px;
+  background-image: url('../img/dashboard_bg.png');
+  background-size: cover;
+  background-position: center;
+  background-attachment: fixed;
+  background-repeat: no-repeat;
   min-height: 100vh;
   overflow-x: hidden;
   line-height: 1.6;
