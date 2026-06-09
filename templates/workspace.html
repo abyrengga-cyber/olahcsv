@@ -455,6 +455,25 @@
           </label>
         </div>
 
+        <!-- Export Scope Selector -->
+        <div style="margin-bottom:0.6rem">
+          <div class="q-label" style="margin-bottom:0.4rem">Cakupan Data</div>
+          <div style="display:flex;gap:0.4rem">
+            <label class="q-checkbox" style="flex:1;padding:0.35rem 0.6rem;background:var(--q-bg-main);border:1px solid var(--q-glass-border);border-radius:6px;cursor:pointer" :style="exportScope==='all' ? 'border-color:var(--q-primary);background:rgba(var(--q-primary-rgb),0.12)' : ''">
+              <input type="radio" name="exportScope" value="all" x-model="exportScope" style="accent-color:var(--q-primary)">
+              <span style="font-size:0.78rem">Data Penuh</span>
+            </label>
+            <label class="q-checkbox" style="flex:1;padding:0.35rem 0.6rem;border:1px solid var(--q-glass-border);border-radius:6px;cursor:pointer" :style="exportScope==='filtered' ? 'border-color:var(--q-primary);background:rgba(var(--q-primary-rgb),0.12)' : 'background:var(--q-bg-main)'" :class="!(filterColumn && filterQuery) ? 'opacity-50' : ''" :title="!(filterColumn && filterQuery) ? 'Terapkan filter preview terlebih dahulu' : 'Ekspor hanya baris yang sesuai filter'">
+              <input type="radio" name="exportScope" value="filtered" x-model="exportScope" :disabled="!(filterColumn && filterQuery)" style="accent-color:var(--q-primary)">
+              <span style="font-size:0.78rem">Terfilter</span>
+            </label>
+          </div>
+          <div x-show="exportScope === 'filtered' && filterColumn && filterQuery" style="font-size:0.7rem;color:var(--q-primary);margin-top:0.3rem;padding:0.25rem 0.4rem;background:rgba(var(--q-primary-rgb),0.08);border-radius:4px">
+            <i data-lucide="filter" style="width:11px;height:11px;vertical-align:middle"></i>
+            Filter: <strong x-text="filterColumn"></strong> = "<span x-text="filterQuery"></span>"
+          </div>
+        </div>
+
         <div class="q-export-group">
           <button class="q-btn q-btn--csv" id="btn-export-csv" @click="exportData('csv')" :disabled="isExporting">
             <i data-lucide="file-text" style="width:16px;height:16px"></i>

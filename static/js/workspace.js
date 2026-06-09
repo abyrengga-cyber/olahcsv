@@ -40,6 +40,9 @@ document.addEventListener('alpine:init', () => {
     includeComparison: true,
     includeChart: true,
 
+    // Export scope: 'all' = full data, 'filtered' = only filtered rows
+    exportScope: 'all',
+
     // Tools State
     tools: {
       datetime: { dateCol: '', timeCol: '', format: 'YYYY-MM-DD HH:MM:SS', dropOriginal: true },
@@ -333,7 +336,10 @@ document.addEventListener('alpine:init', () => {
             comparison_result: this.comparisonResult,
             comparison_columns: this.comparisonColumns,
             include_aggregation: this.includeAggregation,
-            include_comparison: this.includeComparison
+            include_comparison: this.includeComparison,
+            export_scope: this.exportScope,
+            filter_col: this.filterColumn,
+            filter_query: this.filterQuery
           })
         });
         

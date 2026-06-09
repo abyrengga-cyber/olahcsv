@@ -19,6 +19,11 @@ class ExportDataView(APIView):
         export_format = data.get('format', 'csv')
         columns_config = data.get('columns', [])
 
+        # Filter parameters (from preview filter UI)
+        export_scope = data.get('export_scope', 'all')  # 'all' or 'filtered'
+        filter_col = data.get('filter_col', '')
+        filter_query = data.get('filter_query', '')
+
         # Multi-sheet data
         aggregation_result = data.get('aggregation_result', [])
         aggregation_columns = data.get('aggregation_columns', [])
@@ -36,6 +41,10 @@ class ExportDataView(APIView):
             file_obj = UploadedFile.objects.get(id=file_ids[0])
 
             df = pd.read_csv(file_obj.file_path.path, sep=file_obj.delimiter, encoding=file_obj.encoding)
+
+            # Apply filter rows if export_scope is 'filtered'
+            if export_scope == 'filtered' and filter_col and filter_query and filter_col in df.columns:
+                df = df[df[filter_col].astype(str).str.contains(filter_query, case=False, na=False)]
 
             # Select and rename columns if config provided
             if columns_config:
