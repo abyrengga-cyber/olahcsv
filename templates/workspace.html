@@ -93,7 +93,19 @@
           Preview Data
         </div>
         <div style="display:flex;align-items:center;gap:0.5rem">
-          <span style="font-size:0.75rem;color:var(--q-text-muted)" x-text="totalRows + ' baris'"></span>
+          <select class="q-select" style="font-size: 0.75rem; padding: 0.2rem; width:120px;" x-model="filterColumn">
+            <option value="">— Filter Kolom —</option>
+            <template x-for="col in availableColumns" :key="col">
+              <option :value="col" x-text="col"></option>
+            </template>
+          </select>
+          <div style="position: relative;">
+            <i data-lucide="search" style="position: absolute; left: 6px; top: 50%; transform: translateY(-50%); width: 12px; height: 12px; color: var(--q-text-muted);"></i>
+            <input type="text" class="q-input" x-model="filterQuery" @keydown.enter="applyFilter()" placeholder="Kata kunci..." style="width: 130px; font-size: 0.75rem; padding: 0.2rem 0.2rem 0.2rem 24px;">
+          </div>
+          <button class="q-btn q-btn--primary q-btn--sm" @click="applyFilter()" title="Filter" style="padding: 0.2rem 0.4rem;">Filter</button>
+          
+          <span style="font-size:0.75rem;color:var(--q-text-muted); margin-left: 0.5rem" x-text="totalRows + ' baris'"></span>
           <button class="q-btn q-btn--ghost q-btn--sm q-btn--icon" @click="loadPreview(currentPage)" data-tooltip="Refresh">
             <i data-lucide="refresh-cw" style="width:13px;height:13px"></i>
           </button>

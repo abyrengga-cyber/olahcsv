@@ -21,6 +21,8 @@ document.addEventListener('alpine:init', () => {
     sortOrder: null,
     sortVersion: 0,
     tableRowsHtml: '',
+    filterColumn: '',
+    filterQuery: '',
 
     aggregationResult: [],
     aggregationColumns: [],
@@ -103,7 +105,11 @@ document.addEventListener('alpine:init', () => {
     async _fetchSortedPreview() {
       if (!this.fileId || !this.sortColumn) return;
       try {
-        const response = await fetch(`/api/files/${this.fileId}/preview/?page=${this.currentPage}&page_size=${this.pageSize}&sort_by=${encodeURIComponent(this.sortColumn)}&sort_order=${this.sortOrder}`);
+        let url = `/api/files/${this.fileId}/preview/?page=${this.currentPage}&page_size=${this.pageSize}&sort_by=${encodeURIComponent(this.sortColumn)}&sort_order=${this.sortOrder}`;
+        if (this.filterColumn && this.filterQuery) {
+            url += `&filter_col=${encodeURIComponent(this.filterColumn)}&filter_query=${encodeURIComponent(this.filterQuery)}`;
+        }
+        const response = await fetch(url);
         const data = await response.json();
         if (response.ok) {
           this.previewData = data.preview || [];
@@ -204,13 +210,21 @@ document.addEventListener('alpine:init', () => {
       }
     },
 
+    applyFilter() {
+        this.loadPreview(1);
+    },
+
     async loadPreview(page = 1) {
       try {
         this.currentPage = page;
         this.sortColumn = null;
         this.sortOrder = null;
         this.sortVersion = 0;
-        const response = await fetch(`/api/files/${this.fileId}/preview/?page=${page}&page_size=${this.pageSize}`);
+        let url = `/api/files/${this.fileId}/preview/?page=${page}&page_size=${this.pageSize}`;
+        if (this.filterColumn && this.filterQuery) {
+            url += `&filter_col=${encodeURIComponent(this.filterColumn)}&filter_query=${encodeURIComponent(this.filterQuery)}`;
+        }
+        const response = await fetch(url);
         const data = await response.json();
         
         if (response.ok) {

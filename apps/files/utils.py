@@ -61,6 +61,8 @@ def parse_file_metadata(
     page_size=20,
     sort_by=None,
     sort_order="asc",
+    filter_col=None,
+    filter_query=None,
 ):
     """
     Parse a file and return its metadata: length, columns, types, missing data percentages,
@@ -87,6 +89,11 @@ def parse_file_metadata(
             df_full = pd.read_csv(file_path, sep=delimiter, encoding=encoding)
         except pd.errors.EmptyDataError:
             df_full = pd.DataFrame(columns=df_sample.columns)
+
+        # Apply filtering if requested
+        if filter_col and filter_col in df_full.columns and filter_query:
+            df_full = df_full[df_full[filter_col].astype(str).str.contains(filter_query, na=False, case=False)]
+            row_count = len(df_full)
 
         # Apply sorting if requested
         if sort_by and sort_by in df_full.columns:

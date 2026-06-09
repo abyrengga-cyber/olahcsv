@@ -9,6 +9,7 @@ from .utils import parse_file_metadata
 
 
 class FileUploadView(APIView):
+    """View to handle file uploads."""
     parser_classes = (MultiPartParser, FormParser)
 
     def post(self, request, *args, **kwargs):
@@ -88,6 +89,8 @@ class PreviewFileView(APIView):
         page_size = int(request.query_params.get("page_size", 20))
         sort_by = request.query_params.get("sort_by", None)
         sort_order = request.query_params.get("sort_order", "asc")
+        filter_col = request.query_params.get("filter_col", None)
+        filter_query = request.query_params.get("filter_query", None)
 
         file_absolute_path = uploaded_file.file_path.path
         metadata = parse_file_metadata(
@@ -98,6 +101,8 @@ class PreviewFileView(APIView):
             page_size=page_size,
             sort_by=sort_by,
             sort_order=sort_order,
+            filter_col=filter_col,
+            filter_query=filter_query,
         )
 
         if metadata["success"]:
