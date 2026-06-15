@@ -24,6 +24,10 @@ class ExportDataView(APIView):
         filter_col = data.get('filter_col', '')
         filter_query = data.get('filter_query', '')
 
+        # Sort parameters (from preview sort UI)
+        sort_by = data.get('sort_by', '')
+        sort_order = data.get('sort_order', 'asc')  # 'asc' or 'desc'
+
         # Multi-sheet data
         aggregation_result = data.get('aggregation_result', [])
         aggregation_columns = data.get('aggregation_columns', [])
@@ -45,6 +49,11 @@ class ExportDataView(APIView):
             # Apply filter rows if export_scope is 'filtered'
             if export_scope == 'filtered' and filter_col and filter_query and filter_col in df.columns:
                 df = df[df[filter_col].astype(str).str.contains(filter_query, case=False, na=False)]
+
+            # Apply sort if requested (mirrors preview panel sort)
+            if sort_by and sort_by in df.columns:
+                ascending = (sort_order != 'desc')
+                df = df.sort_values(by=sort_by, ascending=ascending, na_position='last')
 
             # Select and rename columns if config provided
             if columns_config:

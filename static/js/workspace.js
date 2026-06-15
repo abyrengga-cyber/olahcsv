@@ -217,12 +217,14 @@ document.addEventListener('alpine:init', () => {
         this.loadPreview(1);
     },
 
-    async loadPreview(page = 1) {
+    async loadPreview(page = 1, resetSort = true) {
       try {
         this.currentPage = page;
-        this.sortColumn = null;
-        this.sortOrder = null;
-        this.sortVersion = 0;
+        if (resetSort) {
+          this.sortColumn = null;
+          this.sortOrder = null;
+          this.sortVersion = 0;
+        }
         let url = `/api/files/${this.fileId}/preview/?page=${page}&page_size=${this.pageSize}`;
         if (this.filterColumn && this.filterQuery) {
             url += `&filter_col=${encodeURIComponent(this.filterColumn)}&filter_query=${encodeURIComponent(this.filterQuery)}`;
@@ -269,7 +271,13 @@ document.addEventListener('alpine:init', () => {
 
     async changePage(page) {
         if (page < 1 || page > this.totalPages) return;
-        await this.loadPreview(page);
+        this.currentPage = page;
+        // If a sort is active, re-fetch with sort preserved
+        if (this.sortColumn && this.sortOrder) {
+            await this._fetchSortedPreview();
+        } else {
+            await this.loadPreview(page);
+        }
         // Scroll table to top
         document.querySelector('.q-table-wrap').scrollTop = 0;
     },
@@ -339,7 +347,9 @@ document.addEventListener('alpine:init', () => {
             include_comparison: this.includeComparison,
             export_scope: this.exportScope,
             filter_col: this.filterColumn,
-            filter_query: this.filterQuery
+            filter_query: this.filterQuery,
+            sort_by: this.sortColumn,
+            sort_order: this.sortOrder
           })
         });
         
