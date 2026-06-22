@@ -1511,7 +1511,7 @@ h4 { font-size: 1.25rem; }
   }
 }
 
-@media (max-width: 900px) {
+@media (max-width: 768px) {
   .q-workspace {
     grid-template-columns: 1fr;
     height: auto;
