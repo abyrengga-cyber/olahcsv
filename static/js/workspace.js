@@ -268,7 +268,7 @@ document.addEventListener('alpine:init', () => {
 
     _initColumnSortable() {
       Alpine.nextTick(() => {
-        const el = this.$refs.columnList;
+        const el = Array.isArray(this.$refs.columnList) ? this.$refs.columnList[0] : this.$refs.columnList;
         if (!el) return;
         if (this._sortableInstance) {
           this._sortableInstance.destroy();

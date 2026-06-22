@@ -1045,7 +1045,7 @@ h4 { font-size: 1.25rem; }
 /* ---- Workspace Layout ---- */
 .q-workspace {
   display: grid;
-  grid-template-columns: 280px 1fr max-content;
+  grid-template-columns: 280px 1fr 280px;
   gap: 1rem;
   padding: 1rem 1.5rem;
   height: calc(100vh - 64px);
