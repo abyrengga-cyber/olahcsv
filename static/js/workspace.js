@@ -313,7 +313,11 @@ document.addEventListener('alpine:init', () => {
       this.tableRowsHtml = html;
     },
 
-    async init() {
+    async     init() {
+      console.log('[DataForge] init() called, fileId from url before restore:', new URLSearchParams(window.location.search).get('file_id'));
+
+      console.log('[DataForge] Right panel in DOM before loadPreview:', !!document.querySelector('.q-workspace > .q-panel:nth-child(3)'));
+
       this._restoreState();
 
       // Get file_id from URL
@@ -323,6 +327,7 @@ document.addEventListener('alpine:init', () => {
       
       if (this.fileId) {
         await this.loadPreview();
+        console.log('[DataForge] Right panel in DOM after loadPreview:', !!document.querySelector('.q-workspace > .q-panel:nth-child(3)'));
         // If preset requested, apply it after preview is loaded
         if (presetId) {
             await this.loadPreset(presetId);
@@ -412,6 +417,8 @@ document.addEventListener('alpine:init', () => {
         const data = await response.json();
         
         if (response.ok) {
+          console.log('[DataForge] loadPreview OK, right panel before columns update:', !!document.querySelector('.q-workspace > .q-panel:nth-child(3)'));
+
           // Initialize columns selection state if not already initialized
           const columns = data.columns.map(c => ({
             ...c,
