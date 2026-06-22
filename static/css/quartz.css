@@ -10,6 +10,7 @@
 :root {
   /* Primary Palette */
   --q-primary: #3366ff;
+  --q-primary-rgb: 51, 102, 255;
   --q-primary-light: #4c6fff;
   --q-primary-dark: #0043a9;
   --q-primary-glow: rgba(51, 102, 255, 0.2);
@@ -79,7 +80,7 @@ body {
   font-family: var(--q-font);
   color: var(--q-text);
   background-color: var(--q-bg-main);
-  background-image: url('../img/dashboard_bg.png');
+  background-image: url('../img/dashboard_bg.jpg');
   background-size: cover;
   background-position: center;
   background-attachment: fixed;
@@ -458,6 +459,12 @@ h4 { font-size: 1.25rem; }
   line-height: 1.4;
 }
 
+.q-btn:focus-visible {
+  outline: 2px solid var(--q-primary);
+  outline-offset: 2px;
+  box-shadow: 0 0 0 4px var(--q-primary-glow);
+}
+
 .q-btn--primary {
   background: linear-gradient(135deg, var(--q-primary) 0%, var(--q-primary-dark) 100%);
   color: white;
@@ -572,6 +579,11 @@ h4 { font-size: 1.25rem; }
   box-shadow: 0 0 0 3px var(--q-primary-glow);
 }
 
+.q-input:focus-visible {
+  outline: 2px solid var(--q-primary);
+  outline-offset: -1px;
+}
+
 .q-input::placeholder {
   color: var(--q-text-muted);
 }
@@ -605,6 +617,11 @@ h4 { font-size: 1.25rem; }
 .q-select:focus {
   border-color: var(--q-primary);
   box-shadow: 0 0 0 3px var(--q-primary-glow);
+}
+
+.q-select:focus-visible {
+  outline: 2px solid var(--q-primary);
+  outline-offset: -1px;
 }
 
 .q-select option {
@@ -951,6 +968,11 @@ h4 { font-size: 1.25rem; }
   background: rgba(0,0,0,0.03);
 }
 
+.q-tab:focus-visible {
+  outline: 2px solid var(--q-primary);
+  outline-offset: 1px;
+}
+
 .q-tab.active {
   color: var(--q-primary);
   background: white;
@@ -1033,7 +1055,6 @@ h4 { font-size: 1.25rem; }
 .q-panel {
   display: flex;
   flex-direction: column;
-  overflow: hidden;
   background: white;
   border: 1px solid var(--q-glass-border);
   border-radius: var(--q-radius);
@@ -1073,6 +1094,27 @@ h4 { font-size: 1.25rem; }
 .q-panel__body::-webkit-scrollbar-thumb {
   background: #cbd5e1;
   border-radius: 3px;
+}
+
+/* ---- Filter Bar ---- */
+.q-filter-bar {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  flex-wrap: wrap;
+  padding: 0.5rem 0.75rem;
+  background: rgba(var(--q-primary-rgb), 0.04);
+  border-bottom: 1px solid var(--q-glass-border);
+}
+
+.q-filter-bar .q-select,
+.q-filter-bar .q-input {
+  font-size: 0.7rem;
+  padding: 0.25rem 0.5rem;
+}
+
+.q-filter-bar .q-select {
+  padding-right: 1.5rem;
 }
 
 /* ---- Column Tree ---- */
@@ -1139,6 +1181,18 @@ h4 { font-size: 1.25rem; }
 .q-col-tree__col-type--date {
   background: rgba(245,158,11,0.15);
   color: #b45309;
+}
+
+.q-col-tree__col {
+  cursor: grab;
+}
+.q-col-tree__col:active {
+  cursor: grabbing;
+}
+.q-col-tree__col--ghost {
+  opacity: 0.4;
+  background: var(--q-bg-main);
+  border: 1px dashed var(--q-primary);
 }
 
 .q-col-tree__col-warn {
@@ -1510,6 +1564,11 @@ h4 { font-size: 1.25rem; }
   border-color: var(--q-glass-border);
 }
 
+.q-pagination__btn:focus-visible {
+  outline: 2px solid var(--q-primary);
+  outline-offset: 1px;
+}
+
 .q-pagination__btn.active {
   background: var(--q-primary);
   border-color: var(--q-primary);
@@ -1525,7 +1584,7 @@ h4 { font-size: 1.25rem; }
 [data-tooltip]::after {
   content: attr(data-tooltip);
   position: absolute;
-  bottom: 120%;
+  top: 120%;
   left: 50%;
   transform: translateX(-50%);
   padding: 0.35rem 0.7rem;
@@ -1533,11 +1592,12 @@ h4 { font-size: 1.25rem; }
   border: 1px solid var(--q-glass-border);
   border-radius: 6px;
   font-size: 0.75rem;
-  color: var(--q-text);
+  color: #f0f0f0;
   white-space: nowrap;
   pointer-events: none;
   opacity: 0;
   transition: opacity 0.2s ease;
+  z-index: 100;
 }
 
 [data-tooltip]:hover::after {
@@ -1652,4 +1712,87 @@ h4 { font-size: 1.25rem; }
 .q-export-item__meta {
   font-size: 0.7rem;
   color: var(--q-text-muted);
+}
+
+/* ---- Skeleton Loader ---- */
+.q-skeleton {
+  background: linear-gradient(90deg, var(--q-bg-main) 25%, rgba(var(--q-primary-rgb), 0.08) 50%, var(--q-bg-main) 75%);
+  background-size: 200% 100%;
+  animation: q-skeleton-shimmer 1.5s ease-in-out infinite;
+  border-radius: 4px;
+}
+
+@keyframes q-skeleton-shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+/* ---- Accessibility: Skip Link ---- */
+.q-skip-link {
+  position: absolute;
+  top: -100%;
+  left: 0;
+  z-index: 10000;
+  padding: 0.75rem 1.5rem;
+  background: var(--q-primary);
+  color: white;
+  font-weight: 600;
+  text-decoration: none;
+  border-radius: 0 0 var(--q-radius) 0;
+  transition: top 0.15s ease;
+}
+
+.q-skip-link:focus {
+  top: 0;
+  outline: 3px solid white;
+  outline-offset: 2px;
+}
+
+.q-skip-link:focus-visible {
+  top: 0;
+  outline: 3px solid white;
+  outline-offset: 2px;
+}
+
+/* ---- Accessibility: Focus Visible ---- */
+.app-header__menu-btn:focus-visible,
+.q-col-tree__file-header:focus-visible,
+.q-th-sortable:focus-visible {
+  outline: 2px solid var(--q-primary);
+  outline-offset: 1px;
+  border-radius: 4px;
+}
+
+.q-col-tree__col:focus-visible {
+  outline: 2px solid var(--q-primary);
+  outline-offset: 1px;
+}
+
+.app-sidebar__link:focus-visible {
+  outline: 2px solid var(--q-primary);
+  outline-offset: 1px;
+  border-radius: 8px;
+}
+
+.q-checkbox input[type="checkbox"]:focus-visible {
+  outline: 2px solid var(--q-primary);
+  outline-offset: 2px;
+}
+
+/* Prevent focus-visible from showing on mouse click */
+:focus:not(:focus-visible) {
+  outline: none;
+}
+
+/* ---- Accessibility: Reduced Motion ---- */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+  .q-skeleton {
+    animation: none !important;
+    background: var(--q-bg-main);
+  }
 }

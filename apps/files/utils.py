@@ -4,17 +4,26 @@ import pandas as pd
 import chardet
 import numpy as np
 
+XLSX_EXTENSIONS = {".xlsx", ".xls"}
+
+
+def _get_ext(file_path):
+    return os.path.splitext(file_path)[1].lower()
+
+
+def is_xlsx(file_path):
+    return _get_ext(file_path) in XLSX_EXTENSIONS
+
 
 def detect_encoding(file_path):
-    """Detect the encoding of a file using chardet on the first chunk."""
+    if is_xlsx(file_path):
+        return None
+
     with open(file_path, "rb") as f:
-        # Read a chunk to guess encoding (usually 100KB is enough)
         raw_data = f.read(100000)
         result = chardet.detect(raw_data)
         encoding = result["encoding"]
 
-        # ASCII is a subset of UTF-8. If it's ASCII, it might have
-        # non-ASCII characters later in the file. UTF-8 is safer.
         if not encoding or encoding.lower() == "ascii" or result["confidence"] < 0.5:
             encoding = "utf-8"
 
@@ -22,17 +31,17 @@ def detect_encoding(file_path):
 
 
 def detect_delimiter(file_path, encoding):
-    """Attempt to detect the delimiter of a CSV/TXT file."""
+    if is_xlsx(file_path):
+        return None
+
     delimiters = [",", ";", "\t", "|"]
     scores = {d: 0 for d in delimiters}
 
     try:
-        # Try primary encoding
         try:
             with open(file_path, "r", encoding=encoding) as f:
                 lines = [f.readline() for _ in range(5)]
         except (UnicodeDecodeError, TypeError):
-            # Fallback to latin-1 if encoding fails (latin-1 never fails to decode bytes)
             with open(file_path, "r", encoding="latin-1") as f:
                 lines = [f.readline() for _ in range(5)]
 
@@ -40,17 +49,50 @@ def detect_delimiter(file_path, encoding):
             for d in delimiters:
                 scores[d] += line.count(d)
 
-        # The delimiter with the most occurrences across the first 5 lines is likely the correct one
         sorted_delimiters = sorted(
             scores.items(), key=lambda item: item[1], reverse=True
         )
         if sorted_delimiters[0][1] > 0:
             return sorted_delimiters[0][0]
         else:
-            return ","  # Default to comma if no delimiters found
+            return ","
 
     except Exception:
         return ","
+
+
+def read_dataframe(file_path, delimiter=None, encoding=None):
+    if is_xlsx(file_path):
+        return pd.read_excel(file_path, engine="openpyxl")
+    return pd.read_csv(file_path, sep=delimiter, encoding=encoding)
+
+
+def _apply_filter(df, col, op, query):
+    if col not in df.columns or not query:
+        return df
+    if op in ("gt", "gte", "lt", "lte", "eq", "neq"):
+        try:
+            val = float(query)
+        except (ValueError, TypeError):
+            return df
+        numeric_col = pd.to_numeric(df[col], errors="coerce")
+        if op == "gt":
+            return df[numeric_col > val]
+        elif op == "gte":
+            return df[numeric_col >= val]
+        elif op == "lt":
+            return df[numeric_col < val]
+        elif op == "lte":
+            return df[numeric_col <= val]
+        elif op == "eq":
+            return df[numeric_col == val]
+        elif op == "neq":
+            return df[numeric_col != val]
+    elif op == "contains":
+        return df[df[col].astype(str).str.contains(query, na=False, case=False)]
+    elif op == "startswith":
+        return df[df[col].astype(str).str.startswith(query, na=False)]
+    return df
 
 
 def parse_file_metadata(
@@ -63,54 +105,68 @@ def parse_file_metadata(
     sort_order="asc",
     filter_col=None,
     filter_query=None,
+    filter_op="contains",
+    filter_col2=None,
+    filter_op2="contains",
+    filter_query2=None,
+    filter_logic="AND",
 ):
-    """
-    Parse a file and return its metadata: length, columns, types, missing data percentages,
-    and a preview of the requested page of rows.
-    """
-    if not encoding or encoding.lower() == "ascii":
+    if not encoding or (encoding and encoding.lower() == "ascii"):
         encoding = detect_encoding(file_path)
 
     if not delimiter:
         delimiter = detect_delimiter(file_path, encoding)
 
     try:
-        # Calculate row count using a fast binary method
-        with open(file_path, "rb") as f:
-            total_raw_rows = sum(1 for _ in f)
-
-        row_count = total_raw_rows - 1 if total_raw_rows > 0 else 0  # subtract header
-
-        # Determine column metadata using a larger sample (e.g., 1000 rows) for better quality stats
-        df_sample = pd.read_csv(file_path, sep=delimiter, encoding=encoding, nrows=1000)
-
-        # Read full data for pagination (with optional sorting)
-        try:
-            df_full = pd.read_csv(file_path, sep=delimiter, encoding=encoding)
-        except pd.errors.EmptyDataError:
-            df_full = pd.DataFrame(columns=df_sample.columns)
-
-        # Apply filtering if requested
-        if filter_col and filter_col in df_full.columns and filter_query:
-            df_full = df_full[df_full[filter_col].astype(str).str.contains(filter_query, na=False, case=False)]
+        if is_xlsx(file_path):
+            df_full = read_dataframe(file_path)
             row_count = len(df_full)
+            df_sample = df_full.head(1000).copy()
+        else:
+            with open(file_path, "rb") as f:
+                total_raw_rows = sum(1 for _ in f)
+            row_count = total_raw_rows - 1 if total_raw_rows > 0 else 0
 
-        # Apply sorting if requested
+            df_sample = pd.read_csv(
+                file_path, sep=delimiter, encoding=encoding, nrows=1000
+            )
+
+            try:
+                df_full = pd.read_csv(file_path, sep=delimiter, encoding=encoding)
+            except pd.errors.EmptyDataError:
+                df_full = pd.DataFrame(columns=df_sample.columns)
+
+        mask1 = _apply_filter(
+            df_full, filter_col, filter_op or "contains", filter_query
+        )
+        mask2 = _apply_filter(
+            df_full, filter_col2, filter_op2 or "contains", filter_query2
+        )
+
+        if mask1 is not df_full and mask2 is not df_full:
+            if filter_logic == "OR":
+                df_full = df_full[mask1 | mask2]
+            else:
+                df_full = df_full[mask1 & mask2]
+        elif mask1 is not df_full:
+            df_full = mask1
+        elif mask2 is not df_full:
+            df_full = mask2
+
+        row_count = len(df_full)
+
         if sort_by and sort_by in df_full.columns:
             ascending = sort_order.lower() != "desc"
             df_full = df_full.sort_values(by=sort_by, ascending=ascending)
 
-        # Read the actual page data
         skip_rows = (page - 1) * page_size
         df_page = df_full.iloc[skip_rows : skip_rows + page_size].reset_index(drop=True)
 
-        # Determine column metadata
         columns_info = []
         problematic_cols_count = 0
         for col in df_sample.columns:
             dtype = str(df_sample[col].dtype)
 
-            # Simple type mapping
             if "int" in dtype or "float" in dtype:
                 col_type = "num"
             elif "datetime" in dtype:
@@ -133,14 +189,12 @@ def parse_file_metadata(
                 {"name": col, "type": col_type, "missing_pct": missing_pct}
             )
 
-        # Calculate cell-level completeness percentage (more accurate than dropna())
         total_cells = df_sample.size
         filled_cells = int(df_sample.count().sum())
         complete_rows_pct = (
             round((filled_cells / total_cells) * 100, 1) if total_cells > 0 else 100.0
         )
 
-        # Get preview data for current page
         preview_data = df_page.fillna("").to_dict(orient="records")
 
         return {

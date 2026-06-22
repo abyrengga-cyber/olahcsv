@@ -16,7 +16,7 @@
         <i data-lucide="folder-tree" style="width:14px;height:14px;vertical-align:middle;margin-right:4px"></i>
         File & Kolom
       </div>
-      <button class="q-btn q-btn--ghost q-btn--sm q-btn--icon" data-tooltip="Tambah File" id="btn-add-file" @click="window.location.href='/'">
+      <button class="q-btn q-btn--ghost q-btn--sm q-btn--icon" data-tooltip="Tambah File" id="btn-add-file" @click="window.location.href='/'" aria-label="Tambah file baru">
         <i data-lucide="plus" style="width:14px;height:14px"></i>
       </button>
     </div>
@@ -28,22 +28,26 @@
       </div>
 
       <template x-if="files.length === 0">
-        <div style="padding: 1rem; text-align: center; color: var(--q-text-muted); font-size: 0.8rem;">
-          Memuat metadata...
+        <div style="padding: 1rem;">
+          <div class="q-skeleton" style="height:14px;width:80%;margin-bottom:0.5rem"></div>
+          <div class="q-skeleton" style="height:14px;width:60%;margin-bottom:0.5rem"></div>
+          <div class="q-skeleton" style="height:14px;width:70%;margin-bottom:0.5rem"></div>
+          <div class="q-skeleton" style="height:14px;width:45%"></div>
         </div>
       </template>
       <template x-for="(file, fileIdx) in files" :key="file.id">
         <div class="q-col-tree__file">
-          <div class="q-col-tree__file-header" @click="file.expanded = !file.expanded">
+          <div class="q-col-tree__file-header" @click="file.expanded = !file.expanded" role="button" tabindex="0" @keydown.enter="file.expanded = !file.expanded" @keydown.space.prevent="file.expanded = !file.expanded" :aria-label="(file.expanded ? 'Ciutkan' : 'Perluas') + ' file ' + file.filename" :aria-expanded="file.expanded">
             <i data-lucide="chevron-down" style="width:14px;height:14px;transition:transform 0.2s" :style="!file.expanded ? 'transform:rotate(-90deg)' : ''"></i>
             <i data-lucide="file-spreadsheet" style="width:14px;height:14px;color:#34d399"></i>
             <span x-text="file.filename"></span>
             <span class="q-chip q-chip--green" style="margin-left:auto;font-size:0.6rem" x-text="file.metadata.column_count + ' col'"></span>
           </div>
-          <div class="q-col-tree__columns" x-show="file.expanded" x-transition>
+          <div class="q-col-tree__columns" x-show="file.expanded" x-transition x-ref="columnList">
             <template x-for="(col, colIdx) in file.metadata.columns" :key="colIdx">
-              <label class="q-col-tree__col" x-show="String(col.name).toLowerCase().includes((searchQuery || '').toLowerCase())">
+              <label class="q-col-tree__col" data-col-idx="colIdx" x-show="String(col.name).toLowerCase().includes((searchQuery || '').toLowerCase())" tabindex="0" @keydown.enter="$el.querySelector('input[type=checkbox]').click()" @keydown.space.prevent="$el.querySelector('input[type=checkbox]').click()">
                 <input type="checkbox" x-model="col.selected" @change="updateDisplayColumns()" style="accent-color:var(--q-primary)">
+                <i data-lucide="grip-vertical" style="width:12px;height:12px;color:var(--q-text-muted);cursor:grab;flex-shrink:0"></i>
                 <span x-text="col.name"></span>
                 <span class="q-col-tree__col-type" :class="'q-col-tree__col-type--' + col.type" x-text="col.type"></span>
                 <span x-show="col.missing_pct > 0" class="q-col-tree__col-warn" :title="col.missing_pct + '% kosong'">⚠</span>
@@ -57,8 +61,8 @@
 
       <!-- Select All / Deselect All -->
       <div style="display:flex;gap:0.5rem;margin-bottom:0.75rem">
-        <button class="q-btn q-btn--ghost q-btn--sm" style="flex:1;font-size:0.7rem" id="btn-select-all" @click="selectAll()">Select All</button>
-        <button class="q-btn q-btn--ghost q-btn--sm" style="flex:1;font-size:0.7rem" id="btn-deselect-all" @click="deselectAll()">Deselect</button>
+        <button class="q-btn q-btn--ghost q-btn--sm" style="flex:1;font-size:0.7rem" id="btn-select-all" @click="selectAll()" aria-label="Pilih semua kolom">Select All</button>
+        <button class="q-btn q-btn--ghost q-btn--sm" style="flex:1;font-size:0.7rem" id="btn-deselect-all" @click="deselectAll()" aria-label="Hapus pilihan semua kolom">Deselect</button>
       </div>
 
       <!-- Data Quality Summary -->
@@ -86,30 +90,54 @@
   </div>
 
   <!-- CENTER PANEL: Preview Table -->
-    <div class="q-panel glass" style="flex:1;overflow:hidden;display:flex;flex-direction:column">
+    <div class="q-panel glass" style="flex:1;display:flex;flex-direction:column">
       <div class="q-panel__header">
         <div class="q-panel__title">
           <i data-lucide="table-2" style="width:14px;height:14px;vertical-align:middle;margin-right:4px"></i>
           Preview Data
+          <span style="font-size:0.75rem;color:var(--q-text-muted);margin-left:0.75rem;font-weight:400" x-text="totalRows + ' baris'" aria-live="polite"></span>
         </div>
-        <div style="display:flex;align-items:center;gap:0.5rem">
-          <select class="q-select" style="font-size: 0.75rem; padding: 0.2rem; width:120px;" x-model="filterColumn">
-            <option value="">— Filter Kolom —</option>
-            <template x-for="col in availableColumns" :key="col">
-              <option :value="col" x-text="col"></option>
-            </template>
-          </select>
-          <div style="position: relative;">
-            <i data-lucide="search" style="position: absolute; left: 6px; top: 50%; transform: translateY(-50%); width: 12px; height: 12px; color: var(--q-text-muted);"></i>
-            <input type="text" class="q-input" x-model="filterQuery" @keydown.enter="applyFilter()" placeholder="Kata kunci..." style="width: 130px; font-size: 0.75rem; padding: 0.2rem 0.2rem 0.2rem 24px;">
-          </div>
-          <button class="q-btn q-btn--primary q-btn--sm" @click="applyFilter()" title="Filter" style="padding: 0.2rem 0.4rem;">Filter</button>
-          
-          <span style="font-size:0.75rem;color:var(--q-text-muted); margin-left: 0.5rem" x-text="totalRows + ' baris'"></span>
-          <button class="q-btn q-btn--ghost q-btn--sm q-btn--icon" @click="loadPreview(currentPage)" data-tooltip="Refresh">
-            <i data-lucide="refresh-cw" style="width:13px;height:13px"></i>
-          </button>
-        </div>
+        <button class="q-btn q-btn--ghost q-btn--sm q-btn--icon" @click="loadPreview(currentPage)" data-tooltip="Refresh" aria-label="Refresh preview data">
+          <i data-lucide="refresh-cw" style="width:13px;height:13px"></i>
+        </button>
+      </div>
+      <!-- Filter Bar -->
+      <div class="q-filter-bar">
+        <select class="q-select" style="width:100px;" x-model="filterColumn">
+          <option value="">Kolom 1</option>
+          <template x-for="col in availableColumns" :key="col">
+            <option :value="col" x-text="col"></option>
+          </template>
+        </select>
+        <select class="q-select" style="width:75px;" x-model="filterOp">
+          <option value="contains">berisi</option>
+          <option value="eq">=</option>
+          <option value="neq">≠</option>
+          <option value="gt">&gt;</option>
+          <option value="gte">≥</option>
+          <option value="lt">&lt;</option>
+          <option value="lte">≤</option>
+        </select>
+        <input type="text" class="q-input" x-model="filterQuery" @keydown.enter="applyFilter()" placeholder="Nilai..." style="width: 100px;">
+        <span style="color:var(--q-text-muted);font-size:0.7rem;padding:0 0.2rem" x-text="filterLogic"></span>
+        <select class="q-select" style="width:100px;" x-model="filterColumn2">
+          <option value="">Kolom 2</option>
+          <template x-for="col in availableColumns" :key="col">
+            <option :value="col" x-text="col"></option>
+          </template>
+        </select>
+        <select class="q-select" style="width:75px;" x-model="filterOp2">
+          <option value="contains">berisi</option>
+          <option value="eq">=</option>
+          <option value="neq">≠</option>
+          <option value="gt">&gt;</option>
+          <option value="gte">≥</option>
+          <option value="lt">&lt;</option>
+          <option value="lte">≤</option>
+        </select>
+        <input type="text" class="q-input" x-model="filterQuery2" @keydown.enter="applyFilter()" placeholder="Nilai..." style="width: 100px;">
+        <button class="q-btn q-btn--sm" @click="filterLogic = (filterLogic === 'AND' ? 'OR' : 'AND')" style="font-size:0.65rem;padding:0.15rem 0.4rem;min-width:32px" x-text="filterLogic" :title="'Ganti ke ' + (filterLogic === 'AND' ? 'OR' : 'AND')" :aria-label="'Logika filter: ' + filterLogic"></button>
+        <button class="q-btn q-btn--primary q-btn--sm" @click="applyFilter()" title="Terapkan filter" style="padding: 0.15rem 0.4rem;" aria-label="Terapkan filter">Terapkan</button>
       </div>
       <div class="q-panel__body" style="padding:0;overflow:hidden;display:flex;flex-direction:column;flex:1">
         
@@ -121,10 +149,10 @@
               Hasil Agregasi
             </h4>
             <div style="display:flex;gap:0.5rem">
-              <button class="q-btn q-btn--primary q-btn--xs" @click="downloadAggregation()">
+              <button class="q-btn q-btn--primary q-btn--xs" @click="downloadAggregation()" aria-label="Unduh hasil agregasi sebagai CSV">
                 <i data-lucide="download" style="width:12px;height:12px"></i> Unduh CSV
               </button>
-              <button class="q-btn q-btn--ghost q-btn--xs" @click="aggregationResult = []">&times; Tutup</button>
+              <button class="q-btn q-btn--ghost q-btn--xs" @click="aggregationResult = []" aria-label="Tutup panel hasil agregasi">&times; Tutup</button>
             </div>
           </div>
           <div class="q-table-wrap" style="max-height:200px">
@@ -149,13 +177,13 @@
           </div>
         </div>
 
-        <div class="q-table-wrap" style="flex:1">
+        <div class="q-table-wrap" style="flex:1" aria-live="polite" aria-label="Tabel preview data">
         <table class="q-table">
           <thead>
             <tr>
               <th>#</th>
               <template x-for="col in displayColumns" :key="col">
-                <th @click="toggleSort(col)" style="cursor:pointer;user-select:none" class="q-th-sortable">
+                <th @click="toggleSort(col)" @keydown.enter="toggleSort(col)" @keydown.space.prevent="toggleSort(col)" tabindex="0" role="columnheader" aria-sort="none" :aria-sort="sortColumn === col ? (sortOrder === 'asc' ? 'ascending' : 'descending') : 'none'" style="cursor:pointer;user-select:none" class="q-th-sortable">
                   <span x-text="col"></span>
                   <template x-if="sortColumn === col">
                     <span x-text="sortOrder === 'asc' ? ' ▲' : ' ▼'" style="font-size:0.65rem"></span>
@@ -167,13 +195,23 @@
               </template>
             </tr>
           </thead>
-          <tbody x-html="tableRowsHtml">
+          <tbody x-html="tableRowsHtml" x-show="!isLoading">
+          </tbody>
+          <tbody x-show="isLoading">
+            <template x-for="i in 5" :key="i">
+              <tr>
+                <td><div class="q-skeleton" style="height:16px;width:20px"></div></td>
+                <template x-for="j in Math.max(displayColumns.length, 3)" :key="j">
+                  <td><div class="q-skeleton" style="height:16px;width:Math.floor(Math.random()*40+40)+'%'"></div></td>
+                </template>
+              </tr>
+            </template>
           </tbody>
         </table>
       </div>
       <!-- Pagination -->
-      <div class="q-pagination" x-show="totalPages > 1">
-        <button class="q-pagination__btn" @click="changePage(currentPage - 1)" :disabled="currentPage === 1" data-tooltip="Sebelumnya">
+      <div class="q-pagination" x-show="totalPages > 1" role="navigation" aria-label="Navigasi halaman">
+        <button class="q-pagination__btn" @click="changePage(currentPage - 1)" :disabled="currentPage === 1" data-tooltip="Sebelumnya" aria-label="Halaman sebelumnya">
           <i data-lucide="chevron-left" style="width:14px;height:14px"></i>
         </button>
         
@@ -181,16 +219,19 @@
             <button class="q-pagination__btn" 
                     :class="{ 'active': currentPage === p }" 
                     x-text="p" 
-                    @click="changePage(p)"></button>
+                    @click="changePage(p)"
+                    :aria-label="'Halaman ' + p"
+                    :aria-current="currentPage === p ? 'page' : false"></button>
         </template>
 
-        <span x-show="totalPages > 5 && currentPage < totalPages - 2" style="color:var(--q-text-muted);font-size:0.8rem">…</span>
+        <span x-show="totalPages > 5 && currentPage < totalPages - 2" style="color:var(--q-text-muted);font-size:0.8rem" aria-hidden="true">…</span>
         <button x-show="totalPages > 5 && currentPage < totalPages - 2" 
                 class="q-pagination__btn" 
                 x-text="totalPages" 
-                @click="changePage(totalPages)"></button>
+                @click="changePage(totalPages)"
+                :aria-label="'Halaman ' + totalPages"></button>
 
-        <button class="q-pagination__btn" @click="changePage(currentPage + 1)" :disabled="currentPage === totalPages" data-tooltip="Selanjutnya">
+        <button class="q-pagination__btn" @click="changePage(currentPage + 1)" :disabled="currentPage === totalPages" data-tooltip="Selanjutnya" aria-label="Halaman selanjutnya">
           <i data-lucide="chevron-right" style="width:14px;height:14px"></i>
         </button>
       </div>
@@ -199,26 +240,34 @@
 
   <!-- RIGHT PANEL: Tools & Settings -->
   <div class="q-panel glass">
-    <div class="q-panel__header">
-      <div class="q-panel__title">
-        <i data-lucide="wrench" style="width:14px;height:14px;vertical-align:middle;margin-right:4px"></i>
-        Tools
+      <div class="q-panel__header">
+        <div class="q-panel__title">
+          <i data-lucide="wrench" style="width:14px;height:14px;vertical-align:middle;margin-right:4px"></i>
+          Tools
+        </div>
+        <div style="display:flex;gap:0.25rem">
+          <button class="q-btn q-btn--ghost q-btn--sm q-btn--icon" @click="undo()" :disabled="!canUndo" data-tooltip="Undo (Ctrl+Z)" aria-label="Undo">
+            <i data-lucide="undo-2" style="width:13px;height:13px"></i>
+          </button>
+          <button class="q-btn q-btn--ghost q-btn--sm q-btn--icon" @click="redo()" :disabled="!canRedo" data-tooltip="Redo (Ctrl+Shift+Z)" aria-label="Redo">
+            <i data-lucide="redo-2" style="width:13px;height:13px"></i>
+          </button>
+        </div>
       </div>
-    </div>
     <div class="q-panel__body">
 
       <!-- Tabs -->
-      <div class="q-tabs">
-        <button class="q-tab active" @click="activeTab = 'datetime'" :class="{ active: activeTab === 'datetime' }">
+      <div class="q-tabs" role="tablist" aria-label="Panel Tools">
+        <button class="q-tab active" @click="activeTab = 'datetime'" :class="{ active: activeTab === 'datetime' }" role="tab" :aria-selected="activeTab === 'datetime'" aria-label="Tools DateTime">
           <i data-lucide="clock" style="width:12px;height:12px"></i> DateTime
         </button>
-        <button class="q-tab" @click="activeTab = 'aggregate'" :class="{ active: activeTab === 'aggregate' }">
+        <button class="q-tab" @click="activeTab = 'aggregate'" :class="{ active: activeTab === 'aggregate' }" role="tab" :aria-selected="activeTab === 'aggregate'" aria-label="Tools Agregasi">
           <i data-lucide="sigma" style="width:12px;height:12px"></i> Agregasi
         </button>
-        <button class="q-tab" @click="activeTab = 'compare'" :class="{ active: activeTab === 'compare' }">
+        <button class="q-tab" @click="activeTab = 'compare'" :class="{ active: activeTab === 'compare' }" role="tab" :aria-selected="activeTab === 'compare'" aria-label="Tools Compare">
           <i data-lucide="percent" style="width:12px;height:12px"></i> Compare
         </button>
-        <button class="q-tab" @click="activeTab = 'chart'" :class="{ active: activeTab === 'chart' }">
+        <button class="q-tab" @click="activeTab = 'chart'" :class="{ active: activeTab === 'chart' }" role="tab" :aria-selected="activeTab === 'chart'" aria-label="Tools Grafik">
           <i data-lucide="bar-chart-3" style="width:12px;height:12px"></i> Grafik
         </button>
       </div>
@@ -259,7 +308,7 @@
               <input type="checkbox" x-model="tools.datetime.dropOriginal">
               <span>Hapus kolom tanggal/waktu asli</span>
             </label>
-            <button class="q-btn q-btn--primary q-btn--sm" id="btn-apply-datetime">
+            <button class="q-btn q-btn--primary q-btn--sm" id="btn-apply-datetime" aria-label="Terapkan normalisasi waktu">
               <i data-lucide="play" style="width:14px;height:14px"></i> Terapkan
             </button>
           </div>
@@ -318,7 +367,7 @@
                 </template>
               </select>
             </div>
-            <button class="q-btn q-btn--primary q-btn--sm" @click="applyAggregation()">
+            <button class="q-btn q-btn--primary q-btn--sm" @click="applyAggregation()" aria-label="Hitung agregasi">
               <i data-lucide="calculator" style="width:14px;height:14px"></i> Hitung
             </button>
           </div>
@@ -360,7 +409,7 @@
               <label class="q-label">Nama Kolom Hasil</label>
               <input type="text" class="q-input" x-model="tools.compare.resultName">
             </div>
-            <button class="q-btn q-btn--primary q-btn--sm" @click="applyComparison()">
+            <button class="q-btn q-btn--primary q-btn--sm" @click="applyComparison()" aria-label="Hitung perbandingan kolom">
               <i data-lucide="percent" style="width:14px;height:14px"></i> Hitung
             </button>
           </div>
@@ -405,14 +454,14 @@
                 </template>
               </select>
             </div>
-            <button class="q-btn q-btn--primary q-btn--sm" id="btn-generate-chart" @click="generateChart()">
+            <button class="q-btn q-btn--primary q-btn--sm" id="btn-generate-chart" @click="generateChart()" aria-label="Generate grafik">
               <i data-lucide="bar-chart-3" style="width:14px;height:14px"></i> Generate
             </button>
             <!-- Chart Preview Area -->
             <div class="glass-card" style="padding:0.75rem;margin-top:0.5rem">
               <canvas id="chart-preview" height="180"></canvas>
             </div>
-            <button class="q-btn q-btn--ghost q-btn--sm" id="btn-download-chart" @click="downloadChart()">
+            <button class="q-btn q-btn--ghost q-btn--sm" id="btn-download-chart" @click="downloadChart()" aria-label="Download grafik sebagai PNG">
               <i data-lucide="image" style="width:14px;height:14px"></i> Download PNG
             </button>
           </div>
@@ -425,10 +474,10 @@
       <div class="q-tool-group">
         <div class="q-tool-group__title">Preset</div>
         <div style="display:flex;gap:0.5rem">
-          <button class="q-btn q-btn--ghost q-btn--sm" style="flex:1" id="btn-load-preset" @click="window.location.href='/presets/?file_id=' + fileId">
+          <button class="q-btn q-btn--ghost q-btn--sm" style="flex:1" id="btn-load-preset" @click="window.location.href='/presets/?file_id=' + fileId" aria-label="Lihat daftar preset">
             <i data-lucide="folder-open" style="width:14px;height:14px"></i> Lihat
           </button>
-          <button class="q-btn q-btn--ghost q-btn--sm" style="flex:1" id="btn-save-preset" @click="saveAsPreset()">
+          <button class="q-btn q-btn--ghost q-btn--sm" style="flex:1" id="btn-save-preset" @click="saveAsPreset()" aria-label="Simpan sebagai preset">
             <i data-lucide="save" style="width:14px;height:14px"></i> Simpan
           </button>
         </div>
@@ -475,11 +524,11 @@
         </div>
 
         <div class="q-export-group">
-          <button class="q-btn q-btn--csv" id="btn-export-csv" @click="exportData('csv')" :disabled="isExporting">
+          <button class="q-btn q-btn--csv" id="btn-export-csv" @click="exportData('csv')" :disabled="isExporting" aria-label="Export data sebagai CSV">
             <i data-lucide="file-text" style="width:16px;height:16px"></i>
             <span x-text="isExporting && exportFormat === 'csv' ? 'Mengekspor...' : 'Export CSV'"></span>
           </button>
-          <button class="q-btn q-btn--xlsx" id="btn-export-xlsx" @click="exportData('xlsx')" :disabled="isExporting">
+          <button class="q-btn q-btn--xlsx" id="btn-export-xlsx" @click="exportData('xlsx')" :disabled="isExporting" aria-label="Export data sebagai XLSX">
             <i data-lucide="file-spreadsheet" style="width:16px;height:16px"></i>
             <span x-text="isExporting && exportFormat === 'xlsx' ? 'Mengekspor...' : 'Export XLSX'"></span>
           </button>

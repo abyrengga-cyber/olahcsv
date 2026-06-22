@@ -83,7 +83,7 @@ function presetManager() {
 
     async fetchPresets() {
       try {
-        const response = await fetch('/presets/api/');
+        const response = await fetch('/api/v1/presets/');
         const data = await response.json();
         this.presets = data;
         this.loading = false;
@@ -98,7 +98,7 @@ function presetManager() {
       if (!confirm("Hapus preset ini?")) return;
       this.deleting = id;
       try {
-        const response = await fetch(`/presets/api/${id}/`, {
+        const response = await fetch(`/api/v1/presets/${id}/`, {
           method: 'DELETE',
           headers: {
             'X-CSRFToken': '{{ csrf_token }}'

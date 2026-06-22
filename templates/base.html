@@ -27,11 +27,12 @@
   {% block extra_head %}{% endblock %}
 </head>
 <body>
+  <a href="#main-content" class="q-skip-link">Langsung ke konten utama</a>
   {% block layout %}
-  <div class="app-wrapper" x-data="{ sidebarOpen: window.innerWidth > 992, isDesktop: window.innerWidth > 992 }" @resize.window="sidebarOpen = window.innerWidth > 992; isDesktop = window.innerWidth > 992">
+  <div class="app-wrapper" x-data="{ sidebarOpen: false, isDesktop: window.innerWidth > 992 }" @resize.window="isDesktop = window.innerWidth > 992">
     
     <!-- Sidebar -->
-    <aside class="app-sidebar" :class="{'open': sidebarOpen}">
+      <aside class="app-sidebar" :class="{'open': sidebarOpen}" role="navigation" aria-label="Navigasi utama">
       <div class="app-sidebar__header">
         <a href="/" class="app-sidebar__logo">
           <img src="https://cdn-icons-png.flaticon.com/512/17749/17749235.png" alt="DataForge" class="app-sidebar__logo-icon">
@@ -66,7 +67,7 @@
     <div class="app-main" :class="{'sidebar-collapsed': !sidebarOpen && isDesktop}">
       <!-- Header -->
       <header class="app-header">
-        <button class="app-header__menu-btn" @click="sidebarOpen = !sidebarOpen">
+        <button class="app-header__menu-btn" @click="sidebarOpen = !sidebarOpen" aria-label="Toggle sidebar" @keydown.escape="sidebarOpen = false">
           <i data-lucide="menu"></i>
         </button>
         <div style="flex-grow:1"></div>
@@ -88,9 +89,9 @@
       </header>
 
       <!-- Content -->
-      <main class="app-content">
+      <main class="app-content" id="main-content" role="main">
         <!-- Toast Container -->
-        <div class="q-toast-container" id="toast-container" style="position:fixed;top:80px;right:2rem;z-index:9999;"></div>
+        <div class="q-toast-container" id="toast-container" style="position:fixed;top:80px;right:2rem;z-index:9999;" aria-live="polite" aria-atomic="true"></div>
 
         {% block content %}{% endblock %}
 

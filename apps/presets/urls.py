@@ -1,11 +1,7 @@
 from django.urls import path
-from .views import PresetListCreateView, PresetDetailView, PresetsPageView
+from .views import PresetListCreateView, PresetDetailView
 
 urlpatterns = [
-    # Pages
-    path('', PresetsPageView.as_view(), name='presets-page'),
-    
-    # API
-    path('api/', PresetListCreateView.as_view(), name='preset-list-create'),
-    path('api/<int:pk>/', PresetDetailView.as_view(), name='preset-detail'),
+    path("", PresetListCreateView.as_view(), name="preset-list-create"),
+    path("<int:pk>/", PresetDetailView.as_view(), name="preset-detail"),
 ]

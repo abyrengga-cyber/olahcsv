@@ -10,6 +10,7 @@ document.addEventListener('alpine:init', () => {
     previewData: [],
     displayColumns: [],
     totalRows: 0,
+    isLoading: false,
     isExporting: false,
     exportFormat: '',
     searchQuery: '',
@@ -23,6 +24,11 @@ document.addEventListener('alpine:init', () => {
     tableRowsHtml: '',
     filterColumn: '',
     filterQuery: '',
+    filterOp: 'contains',
+    filterColumn2: '',
+    filterOp2: 'contains',
+    filterQuery2: '',
+    filterLogic: 'AND',
 
     aggregationResult: [],
     aggregationColumns: [],
@@ -52,7 +58,144 @@ document.addEventListener('alpine:init', () => {
     },
 
     chartInstance: null,
+    _sortableInstance: null,
 
+    STORAGE_KEY: 'dataforge_workspace_state',
+
+    // Undo / Redo
+    _history: [],
+    _historyIndex: -1,
+    _historyMax: 50,
+
+    get canUndo() {
+      return this._historyIndex > 0;
+    },
+
+    get canRedo() {
+      return this._historyIndex < this._history.length - 1;
+    },
+
+    _captureSnapshot() {
+      const cols = this.files[0]?.metadata.columns;
+      if (!cols) return null;
+      return {
+        columns: cols.map(c => ({ name: c.name, selected: c.selected }))
+      };
+    },
+
+    _pushHistory() {
+      const snap = this._captureSnapshot();
+      if (!snap) return;
+      // Truncate any redo entries beyond current index
+      this._history = this._history.slice(0, this._historyIndex + 1);
+      this._history.push(snap);
+      if (this._history.length > this._historyMax) {
+        this._history.shift();
+      }
+      this._historyIndex = this._history.length - 1;
+    },
+
+    _applySnapshot(snap) {
+      if (!snap || !this.files[0]) return;
+      const cols = this.files[0].metadata.columns;
+      // Restore selection state, preserving order from snapshot
+      const newCols = snap.columns.map(s => {
+        const existing = cols.find(c => c.name === s.name);
+        return existing ? { ...existing, selected: s.selected } : null;
+      }).filter(Boolean);
+      // Append any columns in current data not in snapshot (shouldn't happen, but safe)
+      cols.forEach(c => {
+        if (!newCols.find(n => n.name === c.name)) {
+          newCols.push(c);
+        }
+      });
+      this.files[0].metadata.columns = newCols;
+      this.refreshColumnLists();
+      this.updateDisplayColumns();
+      this._initColumnSortable();
+    },
+
+    undo() {
+      if (!this.canUndo) return;
+      this._historyIndex--;
+      this._applySnapshot(this._history[this._historyIndex]);
+      Toast.info('Undo');
+    },
+
+    redo() {
+      if (!this.canRedo) return;
+      this._historyIndex++;
+      this._applySnapshot(this._history[this._historyIndex]);
+      Toast.info('Redo');
+    },
+
+    _filterQueryString() {
+      let qs = '';
+      if (this.filterColumn && this.filterQuery) {
+          qs += `&filter_col=${encodeURIComponent(this.filterColumn)}&filter_op=${encodeURIComponent(this.filterOp)}&filter_query=${encodeURIComponent(this.filterQuery)}`;
+      }
+      if (this.filterColumn2 && this.filterQuery2) {
+          qs += `&filter_col2=${encodeURIComponent(this.filterColumn2)}&filter_op2=${encodeURIComponent(this.filterOp2)}&filter_query2=${encodeURIComponent(this.filterQuery2)}&filter_logic=${encodeURIComponent(this.filterLogic)}`;
+      }
+      return qs;
+    },
+
+    _saveState() {
+      const state = {
+        fileId: this.fileId,
+        tools: this.tools,
+        exportScope: this.exportScope,
+        includeAggregation: this.includeAggregation,
+        includeComparison: this.includeComparison,
+        pageSize: this.pageSize,
+        filterColumn: this.filterColumn,
+        filterQuery: this.filterQuery,
+        filterOp: this.filterOp,
+        filterColumn2: this.filterColumn2,
+        filterOp2: this.filterOp2,
+        filterQuery2: this.filterQuery2,
+        filterLogic: this.filterLogic,
+        sortColumn: this.sortColumn,
+        sortOrder: this.sortOrder,
+        columnSelections: this.files[0]?.metadata.columns.map(c => ({ name: c.name, selected: c.selected })),
+      };
+      try {
+        sessionStorage.setItem(this.STORAGE_KEY, JSON.stringify(state));
+      } catch (e) { /* quota exceeded, ignore */ }
+    },
+
+    _restoreState() {
+      try {
+        const raw = sessionStorage.getItem(this.STORAGE_KEY);
+        if (!raw) return;
+        const saved = JSON.parse(raw);
+        const urlParams = new URLSearchParams(window.location.search);
+        const currentFileId = urlParams.get('file_id');
+        const sameFile = saved.fileId && saved.fileId === currentFileId;
+      if (saved.tools) {
+        if (saved.tools.datetime) Object.assign(this.tools.datetime, saved.tools.datetime);
+        if (saved.tools.aggregate) Object.assign(this.tools.aggregate, saved.tools.aggregate);
+        if (saved.tools.compare) Object.assign(this.tools.compare, saved.tools.compare);
+        if (saved.tools.chart) Object.assign(this.tools.chart, saved.tools.chart);
+      }
+      if (saved.exportScope) this.exportScope = saved.exportScope;
+      if (saved.includeAggregation !== undefined) this.includeAggregation = saved.includeAggregation;
+      if (saved.includeComparison !== undefined) this.includeComparison = saved.includeComparison;
+      if (saved.pageSize) this.pageSize = saved.pageSize;
+      if (sameFile) {
+        if (saved.filterColumn) this.filterColumn = saved.filterColumn;
+        if (saved.filterOp) this.filterOp = saved.filterOp;
+        if (saved.filterQuery) this.filterQuery = saved.filterQuery;
+        if (saved.filterColumn2) this.filterColumn2 = saved.filterColumn2;
+        if (saved.filterOp2) this.filterOp2 = saved.filterOp2;
+        if (saved.filterQuery2) this.filterQuery2 = saved.filterQuery2;
+        if (saved.filterLogic) this.filterLogic = saved.filterLogic;
+        if (saved.sortColumn) this.sortColumn = saved.sortColumn;
+        if (saved.sortOrder) this.sortOrder = saved.sortOrder;
+      }
+      this._pendingColumnSelections = saved.columnSelections || null;
+      } catch (e) { /* corrupted data, ignore */ }
+    },
 
     refreshColumnLists() {
       if (this.files.length === 0) return;
@@ -108,10 +251,8 @@ document.addEventListener('alpine:init', () => {
     async _fetchSortedPreview() {
       if (!this.fileId || !this.sortColumn) return;
       try {
-        let url = `/api/files/${this.fileId}/preview/?page=${this.currentPage}&page_size=${this.pageSize}&sort_by=${encodeURIComponent(this.sortColumn)}&sort_order=${this.sortOrder}`;
-        if (this.filterColumn && this.filterQuery) {
-            url += `&filter_col=${encodeURIComponent(this.filterColumn)}&filter_query=${encodeURIComponent(this.filterQuery)}`;
-        }
+        let url = `/api/v1/files/${this.fileId}/preview/?page=${this.currentPage}&page_size=${this.pageSize}&sort_by=${encodeURIComponent(this.sortColumn)}&sort_order=${this.sortOrder}`;
+        url += this._filterQueryString();
         const response = await fetch(url);
         const data = await response.json();
         if (response.ok) {
@@ -123,6 +264,30 @@ document.addEventListener('alpine:init', () => {
       } catch (e) {
         console.error(e);
       }
+    },
+
+    _initColumnSortable() {
+      Alpine.nextTick(() => {
+        const el = this.$refs.columnList;
+        if (!el) return;
+        if (this._sortableInstance) {
+          this._sortableInstance.destroy();
+        }
+        this._sortableInstance = new Sortable(el, {
+          handle: '.q-col-tree__col',
+          animation: 150,
+          ghostClass: 'q-col-tree__col--ghost',
+          onEnd: (evt) => {
+            const cols = this.files[0]?.metadata.columns;
+            if (!cols) return;
+            this._pushHistory();
+            const [moved] = cols.splice(evt.oldIndex, 1);
+            cols.splice(evt.newIndex, 0, moved);
+            this.updateDisplayColumns();
+            this._saveState();
+          },
+        });
+      });
     },
 
     _renderRows() {
@@ -149,6 +314,8 @@ document.addEventListener('alpine:init', () => {
     },
 
     async init() {
+      this._restoreState();
+
       // Get file_id from URL
       const urlParams = new URLSearchParams(window.location.search);
       this.fileId = urlParams.get('file_id');
@@ -163,11 +330,23 @@ document.addEventListener('alpine:init', () => {
       } else {
         Toast.error("Tidak ada file yang dipilih.");
       }
+
+      // Keyboard shortcuts
+      document.addEventListener('keydown', (e) => {
+        if (e.ctrlKey && e.key === 'z') {
+          e.preventDefault();
+          if (e.shiftKey) {
+            this.redo();
+          } else {
+            this.undo();
+          }
+        }
+      });
     },
 
     async loadPreset(presetId) {
       try {
-        const response = await fetch(`/presets/api/`);
+        const response = await fetch(`/api/v1/presets/`);
         const presets = await response.json();
         const preset = presets.find(p => String(p.id) === String(presetId));
         
@@ -214,10 +393,12 @@ document.addEventListener('alpine:init', () => {
     },
 
     applyFilter() {
+        this._saveState();
         this.loadPreview(1);
     },
 
     async loadPreview(page = 1, resetSort = true) {
+      this.isLoading = true;
       try {
         this.currentPage = page;
         if (resetSort) {
@@ -225,10 +406,8 @@ document.addEventListener('alpine:init', () => {
           this.sortOrder = null;
           this.sortVersion = 0;
         }
-        let url = `/api/files/${this.fileId}/preview/?page=${page}&page_size=${this.pageSize}`;
-        if (this.filterColumn && this.filterQuery) {
-            url += `&filter_col=${encodeURIComponent(this.filterColumn)}&filter_query=${encodeURIComponent(this.filterQuery)}`;
-        }
+        let url = `/api/v1/files/${this.fileId}/preview/?page=${page}&page_size=${this.pageSize}`;
+        url += this._filterQueryString();
         const response = await fetch(url);
         const data = await response.json();
         
@@ -249,8 +428,23 @@ document.addEventListener('alpine:init', () => {
                   columns: columns
                 }
               }];
+
+              // Apply saved column selections from sessionStorage
+              if (this._pendingColumnSelections) {
+                this.files[0].metadata.columns.forEach(c => {
+                  const saved = this._pendingColumnSelections.find(s => s.name === c.name);
+                  if (saved) c.selected = saved.selected;
+                });
+                this._pendingColumnSelections = null;
+                this.updateDisplayColumns();
+              }
           } else {
-              // Always update columns so Compare/Aggregasi dropdowns stay in sync
+              // Preserve existing column selections while updating from server
+              const oldCols = this.files[0]?.metadata.columns || [];
+              columns.forEach(c => {
+                const old = oldCols.find(x => x.name === c.name);
+                if (old) c.selected = old.selected;
+              });
               this.files[0].metadata.columns = columns;
           }
           
@@ -260,12 +454,19 @@ document.addEventListener('alpine:init', () => {
           this.refreshColumnLists();
           this.updateDisplayColumns();
           this._renderRows();
+          this._initColumnSortable();
+          // Push initial history snapshot after load
+          if (this._history.length === 0) {
+            this._pushHistory();
+          }
         } else {
           Toast.error(data.error || "Gagal memuat preview data");
         }
       } catch (e) {
         console.error(e);
         Toast.error("Kesalahan jaringan saat memuat preview");
+      } finally {
+        this.isLoading = false;
       }
     },
 
@@ -293,6 +494,7 @@ document.addEventListener('alpine:init', () => {
 
     selectAll() {
       if (this.files.length > 0) {
+        this._pushHistory();
         this.files[0].metadata.columns.forEach(c => c.selected = true);
         this.updateDisplayColumns();
         Toast.info('Semua kolom dipilih');
@@ -301,6 +503,7 @@ document.addEventListener('alpine:init', () => {
     
     deselectAll() {
       if (this.files.length > 0) {
+        this._pushHistory();
         this.files[0].metadata.columns.forEach(c => c.selected = false);
         this.updateDisplayColumns();
         Toast.info('Semua kolom dihapus');
@@ -308,7 +511,9 @@ document.addEventListener('alpine:init', () => {
     },
 
     toggleColumn(fileId, colName, isChecked) {
+      this._pushHistory();
       this.updateDisplayColumns();
+      this._saveState();
     },
 
     async exportData(format) {
@@ -332,7 +537,7 @@ document.addEventListener('alpine:init', () => {
           headers['X-CSRFToken'] = csrfTokenDoc.value;
         }
 
-        const response = await fetch('/api/export/', {
+        const response = await fetch('/api/v1/export/', {
           method: 'POST',
           headers: headers,
           body: JSON.stringify({
@@ -347,7 +552,12 @@ document.addEventListener('alpine:init', () => {
             include_comparison: this.includeComparison,
             export_scope: this.exportScope,
             filter_col: this.filterColumn,
+            filter_op: this.filterOp,
             filter_query: this.filterQuery,
+            filter_col2: this.filterColumn2,
+            filter_op2: this.filterOp2,
+            filter_query2: this.filterQuery2,
+            filter_logic: this.filterLogic,
             sort_by: this.sortColumn,
             sort_order: this.sortOrder
           })
@@ -436,7 +646,7 @@ document.addEventListener('alpine:init', () => {
 
       Toast.info("Menghitung agregasi...");
       try {
-        const response = await fetch('/api/processor/aggregate/', {
+        const response = await fetch('/api/v1/processor/aggregate/', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -454,8 +664,8 @@ document.addEventListener('alpine:init', () => {
         if (response.ok) {
           this.aggregationResult = data.data;
           this.aggregationColumns = data.columns;
+          this._saveState();
           Toast.success("Agregasi berhasil! Hasil ringkasan muncul di panel tepat di atas tabel preview.");
-          // Switch to a view that shows the result or scroll to it
         } else {
           Toast.error(data.error || "Gagal menghitung agregasi");
         }
@@ -502,7 +712,7 @@ document.addEventListener('alpine:init', () => {
 
       Toast.info("Memproses perbandingan...");
       try {
-        const response = await fetch('/api/processor/compare/', {
+        const response = await fetch('/api/v1/processor/compare/', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -522,8 +732,8 @@ document.addEventListener('alpine:init', () => {
           // Store comparison results for multi-sheet export
           this.comparisonResult = data.data || [];
           this.comparisonColumns = data.columns || [];
+          this._saveState();
           Toast.success(data.message + ' — Hasil tersedia untuk export XLSX.');
-          // Reload preview with the new processed file
           this.fileId = data.new_file_id;
           window.history.replaceState({}, '', `/workspace/?file_id=${data.new_file_id}`);
           this.files = [];
@@ -656,7 +866,7 @@ document.addEventListener('alpine:init', () => {
       };
 
       try {
-        const response = await fetch('/presets/api/', {
+        const response = await fetch('/api/v1/presets/', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',

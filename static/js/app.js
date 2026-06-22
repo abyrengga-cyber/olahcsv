@@ -63,7 +63,7 @@ function uploadZone() {
     },
 
     async processFiles(fileList) {
-      const validExtensions = ['.csv', '.txt'];
+      const validExtensions = ['.csv', '.txt', '.xlsx'];
       const maxSize = 50 * 1024 * 1024; // 50MB
 
       const validFiles = [];
@@ -97,7 +97,7 @@ function uploadZone() {
             headers['X-CSRFToken'] = csrfTokenDoc.value;
           }
 
-          const response = await fetch('/api/files/upload/', {
+          const response = await fetch('/api/v1/files/upload/', {
             method: 'POST',
             body: formData,
             headers: headers

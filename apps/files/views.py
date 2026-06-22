@@ -1,4 +1,5 @@
 import os
+from django.conf import settings
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.parsers import MultiPartParser, FormParser
@@ -10,31 +11,27 @@ from .utils import parse_file_metadata
 
 class FileUploadView(APIView):
     """View to handle file uploads."""
+
     parser_classes = (MultiPartParser, FormParser)
 
     def post(self, request, *args, **kwargs):
-        if not request.user.is_authenticated:
-            return Response(
-                {
-                    "error": "Silakan Sign-in/Login terlebih dahulu untuk mengunggah file."
-                },
-                status=status.HTTP_401_UNAUTHORIZED,
-            )
-
-        # Allow multiple files to be uploaded at once
         files = request.FILES.getlist("file")
         if not files:
             return Response(
                 {"error": "No file provided"}, status=status.HTTP_400_BAD_REQUEST
             )
 
+        for file_obj in files:
+            if file_obj.size > settings.MAX_UPLOAD_SIZE:
+                return Response(
+                    {"error": f"File '{file_obj.name}' melebihi batas maksimal 50MB."},
+                    status=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+                )
+
         results = []
         for file_obj in files:
-            # 1. Save File object
             uploaded_file = UploadedFile.objects.create(
-                user=request.user
-                if request.user.is_authenticated
-                else None,  # We should probably enforce login later
+                user=request.user,
                 original_filename=file_obj.name,
                 file_path=file_obj,
                 file_size=file_obj.size,
@@ -77,9 +74,7 @@ class FileUploadView(APIView):
 class PreviewFileView(APIView):
     def get(self, request, file_id, *args, **kwargs):
         try:
-            uploaded_file = UploadedFile.objects.get(
-                id=file_id, user=request.user if request.user.is_authenticated else None
-            )
+            uploaded_file = UploadedFile.objects.get(id=file_id, user=request.user)
         except UploadedFile.DoesNotExist:
             return Response(
                 {"error": "File not found"}, status=status.HTTP_404_NOT_FOUND
@@ -91,6 +86,11 @@ class PreviewFileView(APIView):
         sort_order = request.query_params.get("sort_order", "asc")
         filter_col = request.query_params.get("filter_col", None)
         filter_query = request.query_params.get("filter_query", None)
+        filter_op = request.query_params.get("filter_op", "contains")
+        filter_col2 = request.query_params.get("filter_col2", None)
+        filter_op2 = request.query_params.get("filter_op2", "contains")
+        filter_query2 = request.query_params.get("filter_query2", None)
+        filter_logic = request.query_params.get("filter_logic", "AND")
 
         file_absolute_path = uploaded_file.file_path.path
         metadata = parse_file_metadata(
@@ -103,6 +103,11 @@ class PreviewFileView(APIView):
             sort_order=sort_order,
             filter_col=filter_col,
             filter_query=filter_query,
+            filter_op=filter_op,
+            filter_col2=filter_col2,
+            filter_op2=filter_op2,
+            filter_query2=filter_query2,
+            filter_logic=filter_logic,
         )
 
         if metadata["success"]:
@@ -114,11 +119,6 @@ class PreviewFileView(APIView):
 
 class FileDeleteView(APIView):
     def delete(self, request, file_id, *args, **kwargs):
-        if not request.user.is_authenticated:
-            return Response(
-                {"error": "Unauthorized"}, status=status.HTTP_401_UNAUTHORIZED
-            )
-
         try:
             uploaded_file = UploadedFile.objects.get(id=file_id, user=request.user)
             uploaded_file.delete()

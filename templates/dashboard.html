@@ -28,7 +28,7 @@
       </span>
       <div class="q-upload-zone__title" style="color: var(--q-text);">Drag & drop file di sini</div>
       <div class="q-upload-zone__subtitle">atau <strong style="color:var(--q-primary)">browse file</strong> dari komputer anda</div>
-      <input type="file" x-ref="fileInput" multiple accept=".csv,.txt" style="display:none" @change="handleFiles($event)" @click.stop>
+      <input type="file" x-ref="fileInput" multiple accept=".csv,.txt,.xlsx" style="display:none" @change="handleFiles($event)" @click.stop>
     </div>
   </div>
 
@@ -103,6 +103,12 @@
         </div>
       </div>
     </div>
+  </div>
+
+  <!-- Trend Chart -->
+  <div class="glass-card q-slide-up" style="animation-delay:0.18s;margin-bottom:1.5rem;padding:1.5rem;">
+    <h4 style="font-size:1rem;color:var(--q-text);font-weight:600;margin:0 0 1rem 0;">Aktivitas Upload & Ekspor</h4>
+    <canvas id="dashboard-chart" style="max-height:200px"></canvas>
   </div>
 
   <!-- Two Column: Recent Files + Preset Shortcuts -->
@@ -197,6 +203,32 @@
 </div>
 
 <script>
+document.addEventListener('DOMContentLoaded', async () => {
+  try {
+    const res = await fetch('/api/v1/dashboard/chart/');
+    const data = await res.json();
+    if (data.labels && data.labels.length > 0) {
+      const ctx = document.getElementById('dashboard-chart').getContext('2d');
+      new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: data.labels,
+          datasets: [
+            { label: 'Upload', data: data.uploads, borderColor: '#3366ff', backgroundColor: 'rgba(51,102,255,0.1)', fill: true, tension: 0.3, pointRadius: 3 },
+            { label: 'Ekspor', data: data.exports, borderColor: '#10b981', backgroundColor: 'rgba(16,185,129,0.1)', fill: true, tension: 0.3, pointRadius: 3 },
+          ],
+        },
+        options: {
+          responsive: true, maintainAspectRatio: false,
+          color: '#425466',
+          scales: { x: { ticks: { color: '#425466' }, grid: { color: 'rgba(0,0,0,0.06)' } }, y: { ticks: { color: '#425466', stepSize: 1 }, grid: { color: 'rgba(0,0,0,0.06)' } } },
+          plugins: { legend: { labels: { color: '#425466', boxWidth: 12, padding: 12 } } },
+        },
+      });
+    }
+  } catch (e) { /* no chart data */ }
+});
+
 async function deleteDashboardFile(fileId) {
     if(!confirm("Yakin ingin menghapus file ini beserta datanya secara permanen? Kapasitas server akan dibebaskan.")) return;
     try {
@@ -204,7 +236,7 @@ async function deleteDashboardFile(fileId) {
         const headers = {};
         if (csrfDoc) headers['X-CSRFToken'] = csrfDoc.value;
         
-        const response = await fetch(`/api/files/${fileId}/delete/`, {
+        const response = await fetch(`/api/v1/files/${fileId}/delete/`, {
             method: 'DELETE',
             headers: headers
         });

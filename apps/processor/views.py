@@ -7,7 +7,7 @@ from rest_framework.response import Response
 from rest_framework import status
 from django.conf import settings
 from apps.files.models import UploadedFile
-from apps.files.utils import detect_encoding, detect_delimiter
+from apps.files.utils import detect_encoding, detect_delimiter, read_dataframe
 from apps.processor.models import ProcessingSession
 
 
@@ -34,7 +34,7 @@ class AggregationView(APIView):
             encoding = uploaded_file.encoding or detect_encoding(path)
             delimiter = uploaded_file.delimiter or detect_delimiter(path, encoding)
 
-            df = pd.read_csv(path, sep=delimiter, encoding=encoding)
+            df = read_dataframe(path, delimiter=delimiter, encoding=encoding)
 
             # Map frontend types to pandas agg functions
             agg_map = {
@@ -140,7 +140,7 @@ class ComparisonView(APIView):
             encoding = uploaded_file.encoding or detect_encoding(path)
             delimiter = uploaded_file.delimiter or detect_delimiter(path, encoding)
 
-            df = pd.read_csv(path, sep=delimiter, encoding=encoding)
+            df = read_dataframe(path, delimiter=delimiter, encoding=encoding)
 
             if calc_type == "pct_diff":
                 df[result_name] = ((df[col_a] - df[col_b]) / df[col_b]) * 100
@@ -178,7 +178,12 @@ class ComparisonView(APIView):
             os.makedirs(new_dir, exist_ok=True)
             new_full_path = os.path.join(new_dir, new_filename)
 
-            df.to_csv(new_full_path, index=False, sep=delimiter, encoding=encoding)
+            df.to_csv(
+                new_full_path,
+                index=False,
+                sep=delimiter or ",",
+                encoding=encoding or "utf-8",
+            )
 
             # Create new UploadedFile record using Django file wrapper
             with open(new_full_path, "rb") as f:
