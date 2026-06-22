@@ -1052,6 +1052,10 @@ h4 { font-size: 1.25rem; }
   min-height: 0;
 }
 
+.q-workspace > * {
+  min-width: 0;
+}
+
 .q-panel {
   display: flex;
   flex-direction: column;

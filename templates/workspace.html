@@ -6,8 +6,8 @@
 {% block footer %}{% endblock %}
 
 {% block content %}
+{% csrf_token %}
 <div class="q-workspace q-fade-in" x-data="workspace">
-  {% csrf_token %}
 
   <!-- LEFT PANEL: File & Column Manager -->
   <div class="q-panel glass">
