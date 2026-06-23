@@ -1,4 +1,5 @@
 import os
+import json
 import io
 import pandas as pd
 import chardet
@@ -61,6 +62,25 @@ def detect_delimiter(file_path, encoding):
         return ","
 
 
+def get_column_values(file_path, column, delimiter=None, encoding=None, max_values=500):
+    if is_xlsx(file_path):
+        df = pd.read_excel(file_path, engine="openpyxl")
+    else:
+        if not encoding:
+            encoding = detect_encoding(file_path)
+        if not delimiter:
+            delimiter = detect_delimiter(file_path, encoding)
+        try:
+            df = pd.read_csv(file_path, sep=delimiter, encoding=encoding)
+        except (UnicodeDecodeError, TypeError):
+            df = pd.read_csv(file_path, sep=delimiter, encoding="latin-1")
+
+    if column not in df.columns:
+        return []
+    values = df[column].dropna().astype(str).drop_duplicates().head(max_values).tolist()
+    return values
+
+
 def read_dataframe(file_path, delimiter=None, encoding=None):
     if is_xlsx(file_path):
         return pd.read_excel(file_path, engine="openpyxl")
@@ -110,6 +130,7 @@ def parse_file_metadata(
     filter_op2="contains",
     filter_query2=None,
     filter_logic="AND",
+    filters=None,
 ):
     if not encoding or (encoding and encoding.lower() == "ascii"):
         encoding = detect_encoding(file_path)
@@ -136,22 +157,40 @@ def parse_file_metadata(
             except pd.errors.EmptyDataError:
                 df_full = pd.DataFrame(columns=df_sample.columns)
 
-        mask1 = _apply_filter(
-            df_full, filter_col, filter_op or "contains", filter_query
-        )
-        mask2 = _apply_filter(
-            df_full, filter_col2, filter_op2 or "contains", filter_query2
-        )
+        if filters:
+            masks = []
+            for f in filters:
+                col = f.get("col", "")
+                op = f.get("op", "contains")
+                query = f.get("query", "")
+                m = _apply_filter(df_full, col, op, query)
+                masks.append(m)
+            active_masks = [m for m in masks if m is not df_full]
+            if active_masks:
+                combined = active_masks[0]
+                for m in active_masks[1:]:
+                    if filter_logic == "OR":
+                        combined = combined | m
+                    else:
+                        combined = combined & m
+                df_full = df_full[combined]
+        else:
+            mask1 = _apply_filter(
+                df_full, filter_col, filter_op or "contains", filter_query
+            )
+            mask2 = _apply_filter(
+                df_full, filter_col2, filter_op2 or "contains", filter_query2
+            )
 
-        if mask1 is not df_full and mask2 is not df_full:
-            if filter_logic == "OR":
-                df_full = df_full[mask1 | mask2]
-            else:
-                df_full = df_full[mask1 & mask2]
-        elif mask1 is not df_full:
-            df_full = mask1
-        elif mask2 is not df_full:
-            df_full = mask2
+            if mask1 is not df_full and mask2 is not df_full:
+                if filter_logic == "OR":
+                    df_full = df_full[mask1 | mask2]
+                else:
+                    df_full = df_full[mask1 & mask2]
+            elif mask1 is not df_full:
+                df_full = mask1
+            elif mask2 is not df_full:
+                df_full = mask2
 
         row_count = len(df_full)
 

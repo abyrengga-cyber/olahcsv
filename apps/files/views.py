@@ -1,4 +1,5 @@
 import os
+import json
 from django.conf import settings
 from rest_framework.views import APIView
 from rest_framework.response import Response
@@ -6,7 +7,7 @@ from rest_framework.parsers import MultiPartParser, FormParser
 from rest_framework import status
 from .models import UploadedFile
 from .serializers import UploadedFileSerializer
-from .utils import parse_file_metadata
+from .utils import parse_file_metadata, get_column_values
 
 
 class FileUploadView(APIView):
@@ -91,6 +92,8 @@ class PreviewFileView(APIView):
         filter_op2 = request.query_params.get("filter_op2", "contains")
         filter_query2 = request.query_params.get("filter_query2", None)
         filter_logic = request.query_params.get("filter_logic", "AND")
+        filters_raw = request.query_params.get("filters", None)
+        filters = json.loads(filters_raw) if filters_raw else None
 
         file_absolute_path = uploaded_file.file_path.path
         metadata = parse_file_metadata(
@@ -108,6 +111,7 @@ class PreviewFileView(APIView):
             filter_op2=filter_op2,
             filter_query2=filter_query2,
             filter_logic=filter_logic,
+            filters=filters,
         )
 
         if metadata["success"]:
@@ -126,4 +130,32 @@ class FileDeleteView(APIView):
         except UploadedFile.DoesNotExist:
             return Response(
                 {"error": "File not found"}, status=status.HTTP_404_NOT_FOUND
+            )
+
+
+class ColumnValuesView(APIView):
+    def get(self, request, file_id, *args, **kwargs):
+        try:
+            uploaded_file = UploadedFile.objects.get(id=file_id, user=request.user)
+        except UploadedFile.DoesNotExist:
+            return Response(
+                {"error": "File not found"}, status=status.HTTP_404_NOT_FOUND
+            )
+        column = request.query_params.get("column", None)
+        if not column:
+            return Response(
+                {"error": "column parameter required"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        try:
+            values = get_column_values(
+                uploaded_file.file_path.path,
+                column,
+                delimiter=uploaded_file.delimiter,
+                encoding=uploaded_file.encoding,
+            )
+            return Response({"values": values}, status=status.HTTP_200_OK)
+        except Exception as e:
+            return Response(
+                {"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )

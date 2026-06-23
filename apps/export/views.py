@@ -30,6 +30,7 @@ class ExportDataView(APIView):
         filter_op2 = data.get("filter_op2", "contains")
         filter_query2 = data.get("filter_query2", "")
         filter_logic = data.get("filter_logic", "AND")
+        filters = data.get("filters", None)
 
         # Sort parameters (from preview sort UI)
         sort_by = data.get("sort_by", "")
@@ -61,18 +62,35 @@ class ExportDataView(APIView):
 
             # Apply filter rows if export_scope is 'filtered'
             if export_scope == "filtered":
-                mask1 = _apply_filter(df, filter_col, filter_op, filter_query)
-                mask2 = _apply_filter(df, filter_col2, filter_op2, filter_query2)
-                if mask1 is not df and mask2 is not df:
-                    df = (
-                        df[mask1 & mask2]
-                        if filter_logic == "AND"
-                        else df[mask1 | mask2]
-                    )
-                elif mask1 is not df:
-                    df = mask1
-                elif mask2 is not df:
-                    df = mask2
+                if filters:
+                    masks = []
+                    for f in filters:
+                        col = f.get("col", "")
+                        op = f.get("op", "contains")
+                        query = f.get("query", "")
+                        m = _apply_filter(df, col, op, query)
+                        masks.append(m)
+                    active_masks = [m for m in masks if m is not df]
+                    if active_masks:
+                        combined = active_masks[0]
+                        for m in active_masks[1:]:
+                            combined = (
+                                combined | m if filter_logic == "OR" else combined & m
+                            )
+                        df = df[combined]
+                else:
+                    mask1 = _apply_filter(df, filter_col, filter_op, filter_query)
+                    mask2 = _apply_filter(df, filter_col2, filter_op2, filter_query2)
+                    if mask1 is not df and mask2 is not df:
+                        df = (
+                            df[mask1 & mask2]
+                            if filter_logic == "AND"
+                            else df[mask1 | mask2]
+                        )
+                    elif mask1 is not df:
+                        df = mask1
+                    elif mask2 is not df:
+                        df = mask2
 
             # Apply sort if requested (mirrors preview panel sort)
             if sort_by and sort_by in df.columns:

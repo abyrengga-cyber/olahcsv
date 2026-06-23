@@ -22,12 +22,7 @@ document.addEventListener('alpine:init', () => {
     sortOrder: null,
     sortVersion: 0,
     tableRowsHtml: '',
-    filterColumn: '',
-    filterQuery: '',
-    filterOp: 'contains',
-    filterColumn2: '',
-    filterOp2: 'contains',
-    filterQuery2: '',
+    filters: [{ col: '', op: 'contains', query: '', values: [] }],
     filterLogic: 'AND',
 
     aggregationResult: [],
@@ -130,14 +125,9 @@ document.addEventListener('alpine:init', () => {
     },
 
     _filterQueryString() {
-      let qs = '';
-      if (this.filterColumn && this.filterQuery) {
-          qs += `&filter_col=${encodeURIComponent(this.filterColumn)}&filter_op=${encodeURIComponent(this.filterOp)}&filter_query=${encodeURIComponent(this.filterQuery)}`;
-      }
-      if (this.filterColumn2 && this.filterQuery2) {
-          qs += `&filter_col2=${encodeURIComponent(this.filterColumn2)}&filter_op2=${encodeURIComponent(this.filterOp2)}&filter_query2=${encodeURIComponent(this.filterQuery2)}&filter_logic=${encodeURIComponent(this.filterLogic)}`;
-      }
-      return qs;
+      const active = this.filters.filter(f => f.col && f.query);
+      if (active.length === 0) return '';
+      return '&filters=' + encodeURIComponent(JSON.stringify(active.map(f => ({ col: f.col, op: f.op, query: f.query })))) + '&filter_logic=' + encodeURIComponent(this.filterLogic);
     },
 
     _saveState() {
@@ -148,12 +138,7 @@ document.addEventListener('alpine:init', () => {
         includeAggregation: this.includeAggregation,
         includeComparison: this.includeComparison,
         pageSize: this.pageSize,
-        filterColumn: this.filterColumn,
-        filterQuery: this.filterQuery,
-        filterOp: this.filterOp,
-        filterColumn2: this.filterColumn2,
-        filterOp2: this.filterOp2,
-        filterQuery2: this.filterQuery2,
+        filters: this.filters.map(f => ({ col: f.col, op: f.op, query: f.query })),
         filterLogic: this.filterLogic,
         sortColumn: this.sortColumn,
         sortOrder: this.sortOrder,
@@ -183,12 +168,19 @@ document.addEventListener('alpine:init', () => {
       if (saved.includeComparison !== undefined) this.includeComparison = saved.includeComparison;
       if (saved.pageSize) this.pageSize = saved.pageSize;
       if (sameFile) {
-        if (saved.filterColumn) this.filterColumn = saved.filterColumn;
-        if (saved.filterOp) this.filterOp = saved.filterOp;
-        if (saved.filterQuery) this.filterQuery = saved.filterQuery;
-        if (saved.filterColumn2) this.filterColumn2 = saved.filterColumn2;
-        if (saved.filterOp2) this.filterOp2 = saved.filterOp2;
-        if (saved.filterQuery2) this.filterQuery2 = saved.filterQuery2;
+        if (saved.filters) {
+          this.filters = saved.filters.map(f => ({ ...f, values: [] }));
+        } else {
+          if (saved.filterColumn) this.filters[0].col = saved.filterColumn;
+          if (saved.filterOp) this.filters[0].op = saved.filterOp;
+          if (saved.filterQuery) this.filters[0].query = saved.filterQuery;
+          if (saved.filterColumn2) {
+            if (this.filters.length < 2) this.filters.push({ col: '', op: 'contains', query: '', values: [] });
+            this.filters[1].col = saved.filterColumn2;
+            if (saved.filterOp2) this.filters[1].op = saved.filterOp2;
+            if (saved.filterQuery2) this.filters[1].query = saved.filterQuery2;
+          }
+        }
         if (saved.filterLogic) this.filterLogic = saved.filterLogic;
         if (saved.sortColumn) this.sortColumn = saved.sortColumn;
         if (saved.sortOrder) this.sortOrder = saved.sortOrder;
@@ -482,6 +474,31 @@ document.addEventListener('alpine:init', () => {
         this.loadPreview(1);
     },
 
+    addFilter() {
+      if (this.filters.length >= 5) return;
+      this.filters.push({ col: '', op: 'contains', query: '', values: [] });
+    },
+
+    removeFilter(idx) {
+      if (this.filters.length <= 1) return;
+      this.filters.splice(idx, 1);
+    },
+
+    async fetchColumnValues(idx) {
+      const f = this.filters[idx];
+      if (!f || !f.col || !this.fileId) return;
+      f.values = [];
+      try {
+        const resp = await fetch(`/api/v1/files/${this.fileId}/column-values/?column=${encodeURIComponent(f.col)}`);
+        const data = await resp.json();
+        if (resp.ok && data.values) {
+          f.values = data.values;
+        }
+      } catch (e) {
+        console.error('DataForge: fetchColumnValues error', e);
+      }
+    },
+
     async loadPreview(page = 1, resetSort = true) {
       this.isLoading = true;
       try {
@@ -636,12 +653,7 @@ document.addEventListener('alpine:init', () => {
             include_aggregation: this.includeAggregation,
             include_comparison: this.includeComparison,
             export_scope: this.exportScope,
-            filter_col: this.filterColumn,
-            filter_op: this.filterOp,
-            filter_query: this.filterQuery,
-            filter_col2: this.filterColumn2,
-            filter_op2: this.filterOp2,
-            filter_query2: this.filterQuery2,
+            filters: this.filters.filter(f => f.col && f.query).map(f => ({ col: f.col, op: f.op, query: f.query })),
             filter_logic: this.filterLogic,
             sort_by: this.sortColumn,
             sort_order: this.sortOrder

@@ -103,39 +103,38 @@
       </div>
       <!-- Filter Bar -->
       <div class="q-filter-bar">
-        <select class="q-select" style="width:100px;" x-model="filterColumn">
-          <option value="">Kolom 1</option>
-          <template x-for="col in availableColumns" :key="col">
-            <option :value="col" x-text="col"></option>
-          </template>
-        </select>
-        <select class="q-select" style="width:75px;" x-model="filterOp">
-          <option value="contains">berisi</option>
-          <option value="eq">=</option>
-          <option value="neq">≠</option>
-          <option value="gt">&gt;</option>
-          <option value="gte">≥</option>
-          <option value="lt">&lt;</option>
-          <option value="lte">≤</option>
-        </select>
-        <input type="text" class="q-input" x-model="filterQuery" @keydown.enter="applyFilter()" placeholder="Nilai..." style="width: 100px;">
-        <span style="color:var(--q-text-muted);font-size:0.7rem;padding:0 0.2rem" x-text="filterLogic"></span>
-        <select class="q-select" style="width:100px;" x-model="filterColumn2">
-          <option value="">Kolom 2</option>
-          <template x-for="col in availableColumns" :key="col">
-            <option :value="col" x-text="col"></option>
-          </template>
-        </select>
-        <select class="q-select" style="width:75px;" x-model="filterOp2">
-          <option value="contains">berisi</option>
-          <option value="eq">=</option>
-          <option value="neq">≠</option>
-          <option value="gt">&gt;</option>
-          <option value="gte">≥</option>
-          <option value="lt">&lt;</option>
-          <option value="lte">≤</option>
-        </select>
-        <input type="text" class="q-input" x-model="filterQuery2" @keydown.enter="applyFilter()" placeholder="Nilai..." style="width: 100px;">
+        <template x-for="(f, idx) in filters" :key="idx">
+          <div style="display:flex;align-items:center;gap:0.25rem">
+            <select class="q-select" style="width:100px;" x-model="filters[idx].col" @change="fetchColumnValues(idx)">
+              <option value="">Kolom <span x-text="idx+1"></span></option>
+              <template x-for="col in availableColumns" :key="col">
+                <option :value="col" x-text="col"></option>
+              </template>
+            </select>
+            <select class="q-select" style="width:65px;" x-model="filters[idx].op">
+              <option value="contains">berisi</option>
+              <option value="eq">=</option>
+              <option value="neq">≠</option>
+              <option value="gt">&gt;</option>
+              <option value="gte">≥</option>
+              <option value="lt">&lt;</option>
+              <option value="lte">≤</option>
+            </select>
+            <template x-if="filters[idx].values.length > 0">
+              <select class="q-select" style="width:100px;" x-model="filters[idx].query" @change="applyFilter()">
+                <option value="">Nilai...</option>
+                <template x-for="v in filters[idx].values" :key="v">
+                  <option :value="v" x-text="v"></option>
+                </template>
+              </select>
+            </template>
+            <template x-if="filters[idx].values.length === 0">
+              <input type="text" class="q-input" x-model="filters[idx].query" @keydown.enter="applyFilter()" placeholder="Nilai..." style="width: 100px;">
+            </template>
+            <button class="q-btn q-btn--sm" style="font-size:0.65rem;padding:0.15rem 0.3rem;min-width:22px;color:var(--q-danger);background:transparent;border:none" @click="removeFilter(idx)" x-show="filters.length > 1" title="Hapus filter">&times;</button>
+          </div>
+        </template>
+        <button class="q-btn q-btn--sm" @click="addFilter()" style="font-size:0.65rem;padding:0.15rem 0.4rem" title="Tambah filter" x-show="filters.length < 5">+</button>
         <button class="q-btn q-btn--sm" @click="filterLogic = (filterLogic === 'AND' ? 'OR' : 'AND')" style="font-size:0.65rem;padding:0.15rem 0.4rem;min-width:32px" x-text="filterLogic" :title="'Ganti ke ' + (filterLogic === 'AND' ? 'OR' : 'AND')" :aria-label="'Logika filter: ' + filterLogic"></button>
         <button class="q-btn q-btn--primary q-btn--sm" @click="applyFilter()" title="Terapkan filter" style="padding: 0.15rem 0.4rem;" aria-label="Terapkan filter">Terapkan</button>
       </div>
@@ -515,14 +514,14 @@
               <input type="radio" name="exportScope" value="all" x-model="exportScope" style="accent-color:var(--q-primary)">
               <span style="font-size:0.78rem">Data Penuh</span>
             </label>
-            <label class="q-checkbox" style="flex:1;padding:0.35rem 0.6rem;border:1px solid var(--q-glass-border);border-radius:6px;cursor:pointer" :style="exportScope==='filtered' ? 'border-color:var(--q-primary);background:rgba(var(--q-primary-rgb),0.12)' : 'background:var(--q-bg-main)'" :class="!(filterColumn && filterQuery) ? 'opacity-50' : ''" :title="!(filterColumn && filterQuery) ? 'Terapkan filter preview terlebih dahulu' : 'Ekspor hanya baris yang sesuai filter'">
-              <input type="radio" name="exportScope" value="filtered" x-model="exportScope" :disabled="!(filterColumn && filterQuery)" style="accent-color:var(--q-primary)">
+            <label class="q-checkbox" style="flex:1;padding:0.35rem 0.6rem;border:1px solid var(--q-glass-border);border-radius:6px;cursor:pointer" :style="exportScope==='filtered' ? 'border-color:var(--q-primary);background:rgba(var(--q-primary-rgb),0.12)' : 'background:var(--q-bg-main)'" :class="!(filters.some(f => f.col && f.query)) ? 'opacity-50' : ''" :title="!(filters.some(f => f.col && f.query)) ? 'Terapkan filter preview terlebih dahulu' : 'Ekspor hanya baris yang sesuai filter'">
+              <input type="radio" name="exportScope" value="filtered" x-model="exportScope" :disabled="!(filters.some(f => f.col && f.query))" style="accent-color:var(--q-primary)">
               <span style="font-size:0.78rem">Terfilter</span>
             </label>
           </div>
-          <div x-show="exportScope === 'filtered' && filterColumn && filterQuery" style="font-size:0.7rem;color:var(--q-primary);margin-top:0.3rem;padding:0.25rem 0.4rem;background:rgba(var(--q-primary-rgb),0.08);border-radius:4px">
+          <div x-show="exportScope === 'filtered' && filters.some(f => f.col && f.query)" style="font-size:0.7rem;color:var(--q-primary);margin-top:0.3rem;padding:0.25rem 0.4rem;background:rgba(var(--q-primary-rgb),0.08);border-radius:4px">
             <i data-lucide="filter" style="width:11px;height:11px;vertical-align:middle"></i>
-            Filter: <strong x-text="filterColumn"></strong> = "<span x-text="filterQuery"></span>"
+            Filter: <span x-text="filters.filter(f => f.col && f.query).map(f => f.col + ' = ' + f.query).join(' ' + filterLogic + ' ')"></span>
           </div>
         </div>
 
@@ -544,5 +543,5 @@
 {% endblock %}
 
 {% block extra_js %}
-<script src="{% static 'js/workspace.js' %}?v=32"></script>
+<script src="{% static 'js/workspace.js' %}?v=33"></script>
 {% endblock %}
