@@ -177,8 +177,11 @@
           </div>
         </div>
 
-        <div class="q-table-wrap" style="flex:1" aria-live="polite" aria-label="Tabel preview data">
-        <table class="q-table">
+        <div class="q-table-wrap" id="preview-table-wrap" style="flex:1" aria-live="polite" aria-label="Tabel preview data">
+        <div class="q-scrollbar-top" role="scrollbar" aria-controls="preview-table" aria-orientation="horizontal">
+          <div class="q-scrollbar-top__thumb"></div>
+        </div>
+        <table class="q-table" id="preview-table">
           <thead>
             <tr>
               <th>#</th>
@@ -541,5 +544,5 @@
 {% endblock %}
 
 {% block extra_js %}
-<script src="{% static 'js/workspace.js' %}?v=20"></script>
+<script src="{% static 'js/workspace.js' %}?v=32"></script>
 {% endblock %}

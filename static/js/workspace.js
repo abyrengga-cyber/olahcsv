@@ -311,6 +311,73 @@ document.addEventListener('alpine:init', () => {
         html += '</tr>';
       });
       this.tableRowsHtml = html;
+      setTimeout(() => {
+        this._updateCustomTopScrollbar();
+      }, 0);
+    },
+
+    _updateCustomTopScrollbar() {
+      try {
+        const wrap = document.querySelector('#preview-table-wrap');
+        const thumb = document.querySelector('.q-scrollbar-top__thumb');
+        const topBar = document.querySelector('.q-scrollbar-top');
+        if (!wrap || !thumb || !topBar) return;
+        const scrollRange = wrap.scrollWidth - wrap.clientWidth;
+        const barWidth = topBar.clientWidth;
+        if (scrollRange <= 0 || barWidth <= 0) {
+          thumb.style.width = '100%';
+          thumb.style.left = '0';
+          return;
+        }
+        const ratio = wrap.clientWidth / wrap.scrollWidth;
+        const thumbWidth = Math.max(ratio * barWidth, 60);
+        const maxLeft = barWidth - thumbWidth;
+        const pos = (wrap.scrollLeft / scrollRange) * maxLeft;
+        thumb.style.width = Math.min(thumbWidth, barWidth) + 'px';
+        thumb.style.left = Math.max(0, Math.min(pos, maxLeft)) + 'px';
+      } catch(e) {
+        console.error('DataForge: _updateCustomTopScrollbar error', e);
+      }
+    },
+
+    _initTopScrollbarDrag() {
+      const thumb = document.querySelector('.q-scrollbar-top__thumb');
+      const topBar = document.querySelector('.q-scrollbar-top');
+      if (!thumb || !topBar) return;
+
+      const onMouseDown = (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        const startX = e.clientX;
+        const startLeft = parseFloat(thumb.style.left) || 0;
+        const barWidth = topBar.clientWidth;
+        const wrap = document.querySelector('#preview-table-wrap');
+        if (!wrap) return;
+
+        const onMouseMove = (e) => {
+          const deltaX = e.clientX - startX;
+          const scrollRange = wrap.scrollWidth - wrap.clientWidth;
+          if (scrollRange <= 0) return;
+          const ratio = wrap.clientWidth / wrap.scrollWidth;
+          const thumbWidth = Math.max(ratio * barWidth, 60);
+          const maxLeft = barWidth - thumbWidth;
+          const newLeft = Math.max(0, Math.min(maxLeft, startLeft + deltaX));
+          const newScrollLeft = (newLeft / maxLeft) * scrollRange;
+          wrap.scrollLeft = newScrollLeft;
+        };
+
+        const onMouseUp = () => {
+          document.removeEventListener('mousemove', onMouseMove);
+          document.removeEventListener('mouseup', onMouseUp);
+          document.body.style.userSelect = '';
+        };
+
+        document.body.style.userSelect = 'none';
+        document.addEventListener('mousemove', onMouseMove);
+        document.addEventListener('mouseup', onMouseUp);
+      };
+
+      thumb.addEventListener('mousedown', onMouseDown);
     },
 
     async init() {
@@ -330,6 +397,24 @@ document.addEventListener('alpine:init', () => {
       } else {
         Toast.error("Tidak ada file yang dipilih.");
       }
+
+      // Custom top scrollbar (visual proxy for bottom scrollbar)
+      setTimeout(() => {
+        const wrap = document.querySelector('#preview-table-wrap');
+        const topBar = document.querySelector('.q-scrollbar-top');
+        if (wrap && topBar) {
+          this._updateCustomTopScrollbar();
+          this._initTopScrollbarDrag();
+          wrap.addEventListener('scroll', () => {
+            this._updateCustomTopScrollbar();
+          });
+        }
+      }, 200);
+
+      // Update thumb on window resize
+      window.addEventListener('resize', () => {
+        this._updateCustomTopScrollbar();
+      });
 
       // Keyboard shortcuts
       document.addEventListener('keydown', (e) => {

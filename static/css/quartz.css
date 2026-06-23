@@ -807,6 +807,67 @@ h4 { font-size: 1.25rem; }
   border-radius: var(--q-radius);
   background: white;
   border: 1px solid var(--q-glass-border);
+  position: relative;
+}
+
+/* ── Custom Top Scrollbar ── */
+/* (custom element, no native scrollbar styling needed) */
+
+#preview-table-wrap::-webkit-scrollbar {
+  height: 28px;
+}
+
+#preview-table-wrap::-webkit-scrollbar-thumb {
+  background: rgba(0,0,0,0.2);
+  border-radius: 14px;
+  border: 6px solid transparent;
+  background-clip: content-box;
+  min-width: 60px;
+}
+
+#preview-table-wrap::-webkit-scrollbar-thumb:hover {
+  background: rgba(0,0,0,0.35);
+  background-clip: content-box;
+}
+
+#preview-table-wrap::-webkit-scrollbar-track {
+  background: rgba(0,0,0,0.04);
+  border-radius: 14px;
+}
+
+#preview-table-wrap {
+  scrollbar-width: auto;
+  scrollbar-color: rgba(0,0,0,0.2) rgba(0,0,0,0.04);
+}
+
+.q-scrollbar-top {
+  position: relative;
+  height: 18px;
+  overflow: hidden;
+  z-index: 10;
+  background: rgba(0,0,0,0.04);
+  border-radius: 9px;
+  margin-bottom: 2px;
+  cursor: pointer;
+  flex-shrink: 0;
+  user-select: none;
+}
+
+.q-scrollbar-top__thumb {
+  position: absolute;
+  top: 3px;
+  bottom: 3px;
+  left: 0;
+  min-width: 60px;
+  background: rgba(0,0,0,0.2);
+  border-radius: 12px;
+  cursor: pointer;
+  transition: background 0.1s ease;
+  will-change: left, width;
+}
+
+.q-scrollbar-top__thumb:hover {
+  background: rgba(0,0,0,0.35);
 }
 
 .q-table {
@@ -945,13 +1006,24 @@ h4 { font-size: 1.25rem; }
   padding: 0.25rem;
   background: var(--q-bg-main);
   border-radius: var(--q-radius);
-  margin-bottom: 1rem;
+  margin-bottom: 0;
+  border-bottom-left-radius: 0;
+  border-bottom-right-radius: 0;
+}
+
+/* Tab content container - seamless with tabs above */
+.q-panel__body > [x-show] {
+  background: var(--q-bg-main);
+  padding: 0.75rem;
+  margin-bottom: 0.75rem;
+  border-bottom-left-radius: var(--q-radius);
+  border-bottom-right-radius: var(--q-radius);
 }
 
 .q-tab {
   flex: 1;
-  padding: 0.55rem 0.75rem;
-  font-size: 0.8rem;
+  padding: 0.45rem 0.4rem;
+  font-size: 0.72rem;
   font-weight: 500;
   text-align: center;
   color: var(--q-text-muted);
@@ -961,6 +1033,18 @@ h4 { font-size: 1.25rem; }
   cursor: pointer;
   transition: var(--q-transition);
   font-family: var(--q-font);
+  white-space: nowrap;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.2rem;
+}
+
+.q-tab i,
+.q-tab svg {
+  width: 11px;
+  height: 11px;
+  flex-shrink: 0;
 }
 
 .q-tab:hover {
@@ -1045,7 +1129,7 @@ h4 { font-size: 1.25rem; }
 /* ---- Workspace Layout ---- */
 .q-workspace {
   display: grid;
-  grid-template-columns: 280px 1fr 280px;
+  grid-template-columns: 280px 1fr 380px;
   gap: 1rem;
   padding: 1rem 1.5rem;
   height: calc(100vh - 64px);
@@ -1085,8 +1169,8 @@ h4 { font-size: 1.25rem; }
 .q-panel__body {
   flex: 1;
   overflow-y: auto;
-  overflow-x: hidden;
-  padding: 1rem;
+  overflow-x: auto;
+  padding: 0.85rem;
   scrollbar-width: thin;
   scrollbar-color: #cbd5e1 transparent;
 }
@@ -1431,27 +1515,90 @@ h4 { font-size: 1.25rem; }
 
 /* ---- Tools Panel Specific ---- */
 .q-tool-group {
-  margin-bottom: 1.25rem;
+  margin-bottom: 1rem;
 }
 
 .q-tool-group__title {
-  font-size: 0.75rem;
+  font-size: 0.72rem;
   font-weight: 700;
   color: var(--q-text-muted);
   text-transform: uppercase;
   letter-spacing: 0.06em;
-  margin-bottom: 0.6rem;
+  margin-bottom: 0.5rem;
+}
+
+/* Compact form elements inside tool groups */
+.q-tool-group .q-select {
+  padding: 0.45rem 2rem 0.45rem 0.65rem;
+  font-size: 0.78rem;
+  background-size: 10px;
+  min-width: 0;
+}
+
+.q-tool-group select.q-select {
+  min-width: 0;
+  width: 100%;
+}
+
+.q-tool-group .q-input {
+  padding: 0.45rem 0.65rem;
+  font-size: 0.78rem;
+}
+
+.q-tool-group .q-label {
+  font-size: 0.7rem;
+  margin-bottom: 0.25rem;
+}
+
+.q-tool-group .q-btn {
+  font-size: 0.75rem;
+  padding: 0.4rem 0.65rem;
+}
+
+.q-tool-group .q-checkbox {
+  font-size: 0.78rem;
+  gap: 0.35rem;
+}
+
+.q-tool-group .q-checkbox input[type="checkbox"] {
+  width: 15px;
+  height: 15px;
+}
+
+/* Constrain chart canvas inside tool panel */
+.q-tool-group .glass-card {
+  overflow: hidden;
+  padding: 0.5rem;
+  max-width: 100%;
+}
+
+.q-tool-group .glass-card canvas,
+.q-tool-group #chart-preview {
+  max-width: 100% !important;
+  width: 100% !important;
+  height: auto !important;
+  min-height: 120px;
+  display: block;
+  box-sizing: border-box;
+}
+
+/* Pastikan container flex chart tab tidak overflow */
+.q-tool-group > div[style*="flex-direction: column"] {
+  min-width: 0;
+  overflow: hidden;
 }
 
 /* ---- Export Buttons Group ---- */
 .q-export-group {
   display: flex;
-  gap: 0.5rem;
-  margin-top: 1rem;
+  gap: 0.4rem;
+  margin-top: 0.75rem;
 }
 
 .q-export-group .q-btn {
   flex: 1;
+  font-size: 0.75rem;
+  padding: 0.4rem 0.5rem;
 }
 
 /* ---- Divider ---- */
@@ -1509,7 +1656,7 @@ h4 { font-size: 1.25rem; }
 /* ---- Responsive ---- */
 @media (max-width: 1200px) {
   .q-workspace {
-    grid-template-columns: 220px 1fr 240px;
+    grid-template-columns: 220px 1fr 320px;
     gap: 0.75rem;
     padding: 0.75rem 1rem;
   }
@@ -1613,21 +1760,33 @@ h4 { font-size: 1.25rem; }
 
 /* ---- Scrollbar ---- */
 ::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+  width: 28px;
+  height: 28px;
 }
 
 ::-webkit-scrollbar-track {
-  background: transparent;
+  background: rgba(0,0,0,0.04);
+  border-radius: 14px;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: rgba(255,255,255,0.08);
-  border-radius: 4px;
+  background: rgba(0,0,0,0.15);
+  border-radius: 14px;
+  border: 6px solid transparent;
+  background-clip: content-box;
+  min-width: 40px;
+  min-height: 40px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(255,255,255,0.15);
+  background: rgba(0,0,0,0.3);
+  background-clip: content-box;
+}
+
+/* Firefox global scrollbar */
+* {
+  scrollbar-width: auto;
+  scrollbar-color: rgba(0,0,0,0.15) rgba(0,0,0,0.04);
 }
 
 /* ---- Page-specific ---- */
