@@ -84,35 +84,41 @@ def get_column_values(file_path, column, delimiter=None, encoding=None, max_valu
 def read_dataframe(file_path, delimiter=None, encoding=None):
     if is_xlsx(file_path):
         return pd.read_excel(file_path, engine="openpyxl")
+    if not encoding:
+        encoding = detect_encoding(file_path)
+    if not delimiter:
+        delimiter = detect_delimiter(file_path, encoding)
     return pd.read_csv(file_path, sep=delimiter, encoding=encoding)
 
 
-def _apply_filter(df, col, op, query):
+def _apply_filter_mask(df, col, op, query):
     if col not in df.columns or not query:
-        return df
+        return None
     if op in ("gt", "gte", "lt", "lte", "eq", "neq"):
         try:
             val = float(query)
         except (ValueError, TypeError):
-            return df
+            if op in ("eq", "neq"):
+                return df[col].astype(str).str.strip() == query.strip()
+            return None
         numeric_col = pd.to_numeric(df[col], errors="coerce")
         if op == "gt":
-            return df[numeric_col > val]
+            return numeric_col > val
         elif op == "gte":
-            return df[numeric_col >= val]
+            return numeric_col >= val
         elif op == "lt":
-            return df[numeric_col < val]
+            return numeric_col < val
         elif op == "lte":
-            return df[numeric_col <= val]
+            return numeric_col <= val
         elif op == "eq":
-            return df[numeric_col == val]
+            return numeric_col == val
         elif op == "neq":
-            return df[numeric_col != val]
+            return numeric_col != val
     elif op == "contains":
-        return df[df[col].astype(str).str.contains(query, na=False, case=False)]
+        return df[col].astype(str).str.contains(query, na=False, case=False)
     elif op == "startswith":
-        return df[df[col].astype(str).str.startswith(query, na=False)]
-    return df
+        return df[col].astype(str).str.startswith(query, na=False)
+    return None
 
 
 def parse_file_metadata(
@@ -163,34 +169,34 @@ def parse_file_metadata(
                 col = f.get("col", "")
                 op = f.get("op", "contains")
                 query = f.get("query", "")
-                m = _apply_filter(df_full, col, op, query)
-                masks.append(m)
-            active_masks = [m for m in masks if m is not df_full]
-            if active_masks:
-                combined = active_masks[0]
-                for m in active_masks[1:]:
+                m = _apply_filter_mask(df_full, col, op, query)
+                if m is not None:
+                    masks.append(m)
+            if masks:
+                combined = masks[0]
+                for m in masks[1:]:
                     if filter_logic == "OR":
                         combined = combined | m
                     else:
                         combined = combined & m
                 df_full = df_full[combined]
         else:
-            mask1 = _apply_filter(
+            mask1 = _apply_filter_mask(
                 df_full, filter_col, filter_op or "contains", filter_query
             )
-            mask2 = _apply_filter(
+            mask2 = _apply_filter_mask(
                 df_full, filter_col2, filter_op2 or "contains", filter_query2
             )
 
-            if mask1 is not df_full and mask2 is not df_full:
+            if mask1 is not None and mask2 is not None:
                 if filter_logic == "OR":
                     df_full = df_full[mask1 | mask2]
                 else:
                     df_full = df_full[mask1 & mask2]
-            elif mask1 is not df_full:
-                df_full = mask1
-            elif mask2 is not df_full:
-                df_full = mask2
+            elif mask1 is not None:
+                df_full = df_full[mask1]
+            elif mask2 is not None:
+                df_full = df_full[mask2]
 
         row_count = len(df_full)
 
