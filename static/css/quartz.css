@@ -1209,6 +1209,56 @@ h4 { font-size: 1.25rem; }
   padding-right: 1.5rem;
 }
 
+.q-filter-logic {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  border: 1px solid var(--q-glass-border);
+  border-radius: 4px;
+  overflow: hidden;
+}
+.q-filter-logic button {
+  background: transparent;
+  border: none;
+  padding: 0.2rem 0.45rem;
+  font-size: 0.65rem;
+  font-weight: 600;
+  cursor: pointer;
+  color: var(--q-muted);
+  transition: all 0.15s;
+}
+.q-filter-logic button.q-active {
+  background: var(--q-primary);
+  color: #fff;
+}
+.q-filter-logic button:not(.q-active):hover {
+  background: rgba(var(--q-primary-rgb), 0.1);
+  color: var(--q-primary);
+}
+.q-filter-logic button + button {
+  border-left: 1px solid var(--q-glass-border);
+}
+
+.q-filter-between {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.6rem;
+  font-weight: 700;
+  color: var(--q-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 0 0.15rem;
+}
+.q-filter-between::before,
+.q-filter-between::after {
+  content: '';
+  display: block;
+  width: 12px;
+  height: 1px;
+  background: var(--q-glass-border);
+}
+
 /* ---- Column Tree ---- */
 .q-col-tree__file {
   margin-bottom: 1rem;

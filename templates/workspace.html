@@ -105,6 +105,9 @@
       <div class="q-filter-bar">
         <template x-for="(f, idx) in filters" :key="idx">
           <div style="display:flex;align-items:center;gap:0.25rem">
+            <template x-if="idx > 0">
+              <span class="q-filter-between" x-text="filterLogic"></span>
+            </template>
             <select class="q-select" style="width:100px;" x-model="filters[idx].col" @change="fetchColumnValues(idx)">
               <option value="">Kolom <span x-text="idx+1"></span></option>
               <template x-for="col in availableColumns" :key="col">
@@ -135,7 +138,10 @@
           </div>
         </template>
         <button class="q-btn q-btn--sm" @click="addFilter()" style="font-size:0.65rem;padding:0.15rem 0.4rem" title="Tambah filter" x-show="filters.length < 5">+</button>
-        <button class="q-btn q-btn--sm" @click="filterLogic = (filterLogic === 'AND' ? 'OR' : 'AND')" style="font-size:0.65rem;padding:0.15rem 0.4rem;min-width:32px" x-text="filterLogic" :title="'Ganti ke ' + (filterLogic === 'AND' ? 'OR' : 'AND')" :aria-label="'Logika filter: ' + filterLogic"></button>
+        <div class="q-filter-logic" title="Logika penggabungan filter">
+          <button :class="{ 'q-active': filterLogic === 'AND' }" @click="filterLogic = 'AND'; applyFilter()">ALL</button>
+          <button :class="{ 'q-active': filterLogic === 'OR' }" @click="filterLogic = 'OR'; applyFilter()">ANY</button>
+        </div>
         <button class="q-btn q-btn--primary q-btn--sm" @click="applyFilter()" title="Terapkan filter" style="padding: 0.15rem 0.4rem;" aria-label="Terapkan filter">Terapkan</button>
       </div>
       <div class="q-panel__body" style="padding:0;overflow:hidden;display:flex;flex-direction:column;flex:1">
