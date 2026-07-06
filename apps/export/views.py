@@ -8,7 +8,7 @@ from rest_framework import status
 from django.conf import settings
 from django.utils import timezone
 from apps.files.models import UploadedFile
-from apps.files.utils import read_dataframe, _apply_filter_mask
+from apps.files.utils import read_dataframe, apply_filter_mask
 from apps.processor.models import ProcessingSession
 from apps.export.models import ExportJob
 import pandas as pd
@@ -69,7 +69,7 @@ class ExportDataView(APIView):
                         col = f.get("col", "")
                         op = f.get("op", "contains")
                         query = f.get("query", "")
-                        m = _apply_filter_mask(df, col, op, query)
+                        m = apply_filter_mask(df, col, op, query)
                         if m is not None:
                             masks.append(m)
                     if masks:
@@ -80,8 +80,8 @@ class ExportDataView(APIView):
                             )
                         df = df[combined]
                 else:
-                    mask1 = _apply_filter_mask(df, filter_col, filter_op, filter_query)
-                    mask2 = _apply_filter_mask(
+                    mask1 = apply_filter_mask(df, filter_col, filter_op, filter_query)
+                    mask2 = apply_filter_mask(
                         df, filter_col2, filter_op2, filter_query2
                     )
                     if mask1 is not None and mask2 is not None:

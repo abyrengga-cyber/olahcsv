@@ -316,7 +316,7 @@
               <input type="checkbox" x-model="tools.datetime.dropOriginal">
               <span>Hapus kolom tanggal/waktu asli</span>
             </label>
-            <button class="q-btn q-btn--primary q-btn--sm" id="btn-apply-datetime" aria-label="Terapkan normalisasi waktu">
+            <button class="q-btn q-btn--primary q-btn--sm" id="btn-apply-datetime" @click="applyDatetime" aria-label="Terapkan normalisasi waktu">
               <i data-lucide="play" style="width:14px;height:14px"></i> Terapkan
             </button>
           </div>
@@ -549,5 +549,5 @@
 {% endblock %}
 
 {% block extra_js %}
-<script src="{% static 'js/workspace.js' %}?v=34"></script>
+<script src="{% static 'js/workspace.js' %}?v=36"></script>
 {% endblock %}

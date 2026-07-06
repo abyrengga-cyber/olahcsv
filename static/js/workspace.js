@@ -29,7 +29,6 @@ document.addEventListener('alpine:init', () => {
     aggregationColumns: [],
     comparisonResult: [],
     comparisonColumns: [],
-    chartImageBase64: null,
 
     // Cached column lists (refreshed after load)
     availableColumns: [],
@@ -373,6 +372,8 @@ document.addEventListener('alpine:init', () => {
     },
 
     async init() {
+      Chart.register(ChartDataLabels);
+      this._csrfToken = document.querySelector('[name=csrfmiddlewaretoken]')?.value;
       this._restoreState();
 
       // Get file_id from URL
@@ -633,12 +634,11 @@ document.addEventListener('alpine:init', () => {
         }));
         
       try {
-        const csrfTokenDoc = document.querySelector('[name=csrfmiddlewaretoken]');
         const headers = {'Content-Type': 'application/json'};
-        if (csrfTokenDoc) {
-          headers['X-CSRFToken'] = csrfTokenDoc.value;
+        if (this._csrfToken) {
+          headers['X-CSRFToken'] = this._csrfToken;
         }
-
+ 
         const response = await fetch('/api/v1/export/', {
           method: 'POST',
           headers: headers,
@@ -747,7 +747,7 @@ document.addEventListener('alpine:init', () => {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+            'X-CSRFToken': this._csrfToken
           },
           body: JSON.stringify({
             file_id: this.fileId,
@@ -813,7 +813,7 @@ document.addEventListener('alpine:init', () => {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+            'X-CSRFToken': this._csrfToken
           },
           body: JSON.stringify({
             file_id: this.fileId,
@@ -844,31 +844,112 @@ document.addEventListener('alpine:init', () => {
       }
     },
 
-    generateChart() {
+    async applyDatetime() {
+      if (!this.fileId) return;
+      if (!this.tools.datetime.dateCol && !this.tools.datetime.timeCol) {
+        Toast.info("Mencoba deteksi otomatis kolom tanggal...");
+      }
+
+      Toast.info("Menormalisasi waktu...");
+      try {
+        const response = await fetch('/api/v1/processor/datetime/', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': this._csrfToken
+          },
+          body: JSON.stringify({
+            file_id: this.fileId,
+            dateCol: this.tools.datetime.dateCol,
+            timeCol: this.tools.datetime.timeCol,
+            format: this.tools.datetime.format,
+            dropOriginal: this.tools.datetime.dropOriginal
+          })
+        });
+
+        const data = await response.json();
+        if (response.ok) {
+          this._saveState();
+          Toast.success(data.message);
+          this.fileId = data.new_file_id;
+          window.history.replaceState({}, '', `/workspace/?file_id=${data.new_file_id}`);
+          this.files = [];
+          await this.loadPreview();
+        } else {
+          Toast.error(data.error || "Gagal menormalisasi waktu");
+        }
+      } catch (e) {
+        console.error(e);
+        Toast.error("Terjadi kesalahan jaringan.");
+      }
+    },
+
+    async generateChart() {
       if (!this.tools.chart.xCol || !this.tools.chart.yCol) {
         Toast.warning("Pilih Kolom X dan Kolom Y terlebih dahulu.");
         return;
       }
 
-      let dataSource = this.tools.chart.source === 'agregasi' ? this.aggregationResult : this.previewData;
-      if (!dataSource || dataSource.length === 0) {
+      Toast.info("Membuat grafik...");
+
+      let chartDataPoints;
+      if (this.tools.chart.source === 'agregasi') {
+        if (!this.aggregationResult || this.aggregationResult.length === 0) {
+          Toast.warning("Data agregasi kosong.");
+          return;
+        }
+        chartDataPoints = this._extractChartData(this.aggregationResult);
+      } else {
+        try {
+          const response = await fetch('/api/v1/processor/chart-data/', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'X-CSRFToken': this._csrfToken
+            },
+            body: JSON.stringify({
+              file_id: this.fileId,
+              x_col: this.tools.chart.xCol,
+              y_col: this.tools.chart.yCol,
+              max_points: 1000,
+              filters: this.filters.filter(f => f.col && f.query).map(f => ({ col: f.col, op: f.op, query: f.query })),
+              filter_logic: this.filterLogic,
+            })
+          });
+          const data = await response.json();
+          chartDataPoints = response.ok && data.data ? data.data : this._extractChartData(this.previewData);
+        } catch (e) {
+          chartDataPoints = this._extractChartData(this.previewData);
+        }
+      }
+
+      if (!chartDataPoints || chartDataPoints.length === 0) {
         Toast.warning("Data kosong.");
         return;
       }
 
-      // Extract labels and data
-      const labels = dataSource.map(row => {
-        let val = row[this.tools.chart.xCol];
-        return (val === null || val === undefined || val === '') ? 'N/A' : String(val);
-      });
-      const chartData = dataSource.map(row => parseFloat(row[this.tools.chart.yCol]) || 0);
+      this._renderChart(chartDataPoints);
+    },
+
+    _extractChartData(dataSource) {
+      return dataSource.map(row => ({
+        x: (row[this.tools.chart.xCol] == null || row[this.tools.chart.xCol] === '') ? 'N/A' : String(row[this.tools.chart.xCol]),
+        y: parseFloat(row[this.tools.chart.yCol]) || 0,
+      }));
+    },
+
+    _renderChart(chartData) {
+      const labels = [], values = [];
+      for (const d of chartData) {
+        labels.push(d.x);
+        values.push(d.y);
+      }
 
       const ctx = document.getElementById('chart-preview').getContext('2d');
       if (this.chartInstance) {
         this.chartInstance.destroy();
       }
 
-      // Palet warna yang selaras dengan DataForge
       const bgColors = [
         'rgba(16, 185, 129, 0.7)',
         'rgba(59, 130, 246, 0.7)',
@@ -878,16 +959,13 @@ document.addEventListener('alpine:init', () => {
         'rgba(6, 182, 212, 0.7)'
       ];
 
-      // Register DataLabels plugin
-      Chart.register(ChartDataLabels);
-
       this.chartInstance = new Chart(ctx, {
         type: this.tools.chart.type,
         data: {
           labels: labels,
           datasets: [{
             label: this.tools.chart.yCol,
-            data: chartData,
+            data: values,
             backgroundColor: this.tools.chart.type === 'pie' ? bgColors : bgColors[0],
             borderColor: this.tools.chart.type === 'pie' ? '#1f2937' : 'rgba(16, 185, 129, 1)',
             borderWidth: 1
@@ -923,18 +1001,9 @@ document.addEventListener('alpine:init', () => {
         }
       });
 
-      // Beri sedikit delay agar chart selesai menggambar animasi sebelum nge-capture image.
       setTimeout(() => {
-        this.captureChart();
-      }, 800);
-    },
-
-    captureChart() {
-      const canvas = document.getElementById('chart-preview');
-      if (canvas) {
-        this.chartImageBase64 = canvas.toDataURL('image/png');
         Toast.success('Grafik telah dibuat.');
-      }
+      }, 800);
     },
 
     async saveAsPreset() {
@@ -983,8 +1052,7 @@ document.addEventListener('alpine:init', () => {
     },
 
     getCsrfToken() {
-      const token = document.querySelector('[name=csrfmiddlewaretoken]')?.value;
-      if (token) return token;
+      if (this._csrfToken) return this._csrfToken;
       return document.cookie.split('; ')
         .find(row => row.startsWith('csrftoken='))
         ?.split('=')[1];

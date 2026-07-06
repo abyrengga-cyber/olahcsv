@@ -1,13 +1,19 @@
 import os
+import io
 import math
 import pandas as pd
-from django.core.files import File
+from django.core.files.base import ContentFile
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
 from django.conf import settings
 from apps.files.models import UploadedFile
-from apps.files.utils import detect_encoding, detect_delimiter, read_dataframe
+from apps.files.utils import (
+    detect_encoding,
+    detect_delimiter,
+    read_dataframe,
+    apply_filter_mask,
+)
 from apps.processor.models import ProcessingSession
 
 
@@ -214,4 +220,202 @@ class ComparisonView(APIView):
             )
 
         except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+
+class DateTimeView(APIView):
+    def post(self, request):
+        file_id = request.data.get("file_id")
+        date_col = request.data.get("dateCol", "")
+        time_col = request.data.get("timeCol", "")
+        output_format = request.data.get("format", "YYYY-MM-DD HH:MM:SS")
+        drop_original = request.data.get("dropOriginal", True)
+
+        if not file_id:
+            return Response(
+                {"error": "Missing file_id"}, status=status.HTTP_400_BAD_REQUEST
+            )
+
+        try:
+            uploaded_file = UploadedFile.objects.get(id=file_id)
+
+            session, _ = ProcessingSession.objects.get_or_create(
+                user=request.user, status="ACTIVE", defaults={"configuration": {}}
+            )
+            session.files.add(uploaded_file)
+
+            path = uploaded_file.file_path.path
+            encoding = uploaded_file.encoding or detect_encoding(path)
+            delimiter = uploaded_file.delimiter or detect_delimiter(path, encoding)
+
+            df = read_dataframe(path, delimiter=delimiter, encoding=encoding)
+
+            result_col = "datetime_normalized"
+            originals = []
+
+            if date_col and date_col in df.columns:
+                originals.append(date_col)
+                parsed_date = pd.to_datetime(df[date_col], errors="coerce")
+                if time_col and time_col in df.columns:
+                    originals.append(time_col)
+                    parsed_time = pd.to_datetime(df[time_col], errors="coerce")
+                    date_str = parsed_date.dt.strftime("%Y-%m-%d")
+                    safe_time = parsed_time.fillna(pd.Timestamp("1970-01-01 00:00:00"))
+                    time_str = safe_time.dt.strftime("%H:%M:%S")
+                    time_str = time_str.where(parsed_time.notna(), "00:00:00")
+                    df[result_col] = pd.to_datetime(
+                        date_str + " " + time_str,
+                        errors="coerce",
+                    )
+                else:
+                    df[result_col] = parsed_date
+            else:
+                auto_col = None
+                sample = df.head(100)
+                for col in df.columns:
+                    try:
+                        parsed = pd.to_datetime(sample[col], errors="coerce")
+                        if parsed.notna().sum() > len(sample) * 0.5:
+                            auto_col = col
+                            break
+                    except Exception:
+                        continue
+                if auto_col:
+                    originals.append(auto_col)
+                    df[result_col] = pd.to_datetime(df[auto_col], errors="coerce")
+                else:
+                    return Response(
+                        {
+                            "error": "Tidak dapat mendeteksi kolom tanggal/waktu secara otomatis."
+                        },
+                        status=status.HTTP_400_BAD_REQUEST,
+                    )
+
+            if output_format == "YYYY-MM-DD HH:MM:SS":
+                df[result_col] = df[result_col].dt.strftime("%Y-%m-%d %H:%M:%S")
+            elif output_format == "DD/MM/YYYY HH:MM:SS":
+                df[result_col] = df[result_col].dt.strftime("%d/%m/%Y %H:%M:%S")
+            elif output_format == "ISO 8601":
+                df[result_col] = df[result_col].dt.strftime("%Y-%m-%dT%H:%M:%S")
+            elif output_format == "Unix Timestamp":
+                df[result_col] = df[result_col].astype("int64") // 10**9
+
+            if drop_original:
+                keep = [c for c in df.columns if c not in originals]
+                if result_col not in keep:
+                    keep.append(result_col)
+                df = df[keep]
+
+            base = uploaded_file.original_filename
+            if base.startswith("processed_"):
+                base = base[10:]
+            new_filename = f"processed_{base}"
+            buf = io.BytesIO()
+            df.to_csv(
+                buf,
+                index=False,
+                sep=delimiter or ",",
+                encoding=encoding or "utf-8",
+            )
+            csv_bytes = buf.getvalue()
+
+            new_file = UploadedFile(
+                user=uploaded_file.user,
+                original_filename=new_filename,
+                file_size=len(csv_bytes),
+                delimiter=delimiter,
+                encoding=encoding,
+                row_count=len(df),
+                column_count=len(df.columns),
+                status="READY",
+            )
+            new_file.file_path.save(
+                os.path.join("uploads", "processed", new_filename),
+                ContentFile(csv_bytes),
+                save=True,
+            )
+
+            return Response(
+                {
+                    "success": True,
+                    "new_file_id": new_file.id,
+                    "message": "Normalisasi waktu berhasil!",
+                }
+            )
+
+        except Exception as e:
+            import traceback
+
+            traceback.print_exc()
+            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+
+class ChartDataView(APIView):
+    def post(self, request):
+        file_id = request.data.get("file_id")
+        x_col = request.data.get("x_col")
+        y_col = request.data.get("y_col")
+        max_points = int(request.data.get("max_points", 1000))
+        filters = request.data.get("filters", [])
+        filter_logic = request.data.get("filter_logic", "AND")
+
+        if not all([file_id, x_col, y_col]):
+            return Response(
+                {"error": "Missing parameters"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        try:
+            uploaded_file = UploadedFile.objects.get(id=file_id)
+            path = uploaded_file.file_path.path
+            encoding = uploaded_file.encoding or detect_encoding(path)
+            delimiter = uploaded_file.delimiter or detect_delimiter(path, encoding)
+
+            df = read_dataframe(path, delimiter=delimiter, encoding=encoding)
+
+            if filters:
+                masks = []
+                for f in filters:
+                    col = f.get("col", "")
+                    op = f.get("op", "contains")
+                    query = f.get("query", "")
+                    m = apply_filter_mask(df, col, op, query)
+                    if m is not None:
+                        masks.append(m)
+                if masks:
+                    combined = masks[0]
+                    for m in masks[1:]:
+                        if filter_logic == "OR":
+                            combined = combined | m
+                        else:
+                            combined = combined & m
+                    df = df[combined]
+
+            if x_col not in df.columns or y_col not in df.columns:
+                return Response(
+                    {"error": "Column not found"},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
+            df_subset = df.head(max_points)
+
+            x_vals = df_subset[x_col].tolist()
+            y_vals = pd.to_numeric(df_subset[y_col], errors="coerce").tolist()
+            data = [
+                {"x": None if pd.isna(x) else str(x), "y": None if pd.isna(y) else y}
+                for x, y in zip(x_vals, y_vals)
+            ]
+
+            return Response(
+                {
+                    "success": True,
+                    "data": data,
+                    "total_rows": len(df),
+                }
+            )
+
+        except Exception as e:
+            import traceback
+
+            traceback.print_exc()
             return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)

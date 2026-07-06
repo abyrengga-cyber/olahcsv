@@ -91,7 +91,7 @@ def read_dataframe(file_path, delimiter=None, encoding=None):
     return pd.read_csv(file_path, sep=delimiter, encoding=encoding)
 
 
-def _apply_filter_mask(df, col, op, query):
+def apply_filter_mask(df, col, op, query):
     if col not in df.columns or not query:
         return None
     if op in ("gt", "gte", "lt", "lte", "eq", "neq"):
@@ -169,7 +169,7 @@ def parse_file_metadata(
                 col = f.get("col", "")
                 op = f.get("op", "contains")
                 query = f.get("query", "")
-                m = _apply_filter_mask(df_full, col, op, query)
+                m = apply_filter_mask(df_full, col, op, query)
                 if m is not None:
                     masks.append(m)
             if masks:
@@ -181,10 +181,10 @@ def parse_file_metadata(
                         combined = combined & m
                 df_full = df_full[combined]
         else:
-            mask1 = _apply_filter_mask(
+            mask1 = apply_filter_mask(
                 df_full, filter_col, filter_op or "contains", filter_query
             )
-            mask2 = _apply_filter_mask(
+            mask2 = apply_filter_mask(
                 df_full, filter_col2, filter_op2 or "contains", filter_query2
             )
 
