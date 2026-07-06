@@ -30,7 +30,7 @@ class AggregationView(APIView):
             )
 
         try:
-            uploaded_file = UploadedFile.objects.get(id=file_id)
+            uploaded_file = UploadedFile.objects.get(id=file_id, user=request.user)
             session, _ = ProcessingSession.objects.get_or_create(
                 user=request.user, status="ACTIVE", defaults={"configuration": {}}
             )
@@ -135,7 +135,7 @@ class ComparisonView(APIView):
             )
 
         try:
-            uploaded_file = UploadedFile.objects.get(id=file_id)
+            uploaded_file = UploadedFile.objects.get(id=file_id, user=request.user)
 
             session, _ = ProcessingSession.objects.get_or_create(
                 user=request.user, status="ACTIVE", defaults={"configuration": {}}
@@ -237,7 +237,7 @@ class DateTimeView(APIView):
             )
 
         try:
-            uploaded_file = UploadedFile.objects.get(id=file_id)
+            uploaded_file = UploadedFile.objects.get(id=file_id, user=request.user)
 
             session, _ = ProcessingSession.objects.get_or_create(
                 user=request.user, status="ACTIVE", defaults={"configuration": {}}
@@ -366,7 +366,7 @@ class ChartDataView(APIView):
             )
 
         try:
-            uploaded_file = UploadedFile.objects.get(id=file_id)
+            uploaded_file = UploadedFile.objects.get(id=file_id, user=request.user)
             path = uploaded_file.file_path.path
             encoding = uploaded_file.encoding or detect_encoding(path)
             delimiter = uploaded_file.delimiter or detect_delimiter(path, encoding)

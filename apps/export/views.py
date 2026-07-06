@@ -53,7 +53,7 @@ class ExportDataView(APIView):
             )
 
         try:
-            file_obj = UploadedFile.objects.get(id=file_ids[0])
+            file_obj = UploadedFile.objects.get(id=file_ids[0], user=request.user)
 
             df = read_dataframe(
                 file_obj.file_path.path,
