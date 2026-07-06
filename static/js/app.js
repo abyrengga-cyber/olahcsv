@@ -23,11 +23,23 @@ const Toast = {
 
     const toast = document.createElement('div');
     toast.className = `q-toast q-toast--${type}`;
-    toast.innerHTML = `
-      <span class="q-toast__icon">${icons[type] || icons.info}</span>
-      <span class="q-toast__text">${message}</span>
-      <button class="q-toast__close" onclick="this.parentElement.remove()">&times;</button>
-    `;
+
+    const iconSpan = document.createElement('span');
+    iconSpan.className = 'q-toast__icon';
+    iconSpan.textContent = icons[type] || icons.info;
+
+    const textSpan = document.createElement('span');
+    textSpan.className = 'q-toast__text';
+    textSpan.textContent = message;
+
+    const closeBtn = document.createElement('button');
+    closeBtn.className = 'q-toast__close';
+    closeBtn.textContent = '\u00D7';
+    closeBtn.onclick = () => toast.remove();
+
+    toast.appendChild(iconSpan);
+    toast.appendChild(textSpan);
+    toast.appendChild(closeBtn);
 
     this.container.appendChild(toast);
 
