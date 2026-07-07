@@ -1,7 +1,7 @@
 import os
 import io
 import base64
-import traceback
+import logging
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
@@ -13,6 +13,8 @@ from apps.processor.models import ProcessingSession
 from apps.export.models import ExportJob
 import pandas as pd
 import uuid
+
+logger = logging.getLogger(__name__)
 
 
 class ExportDataView(APIView):
@@ -201,7 +203,7 @@ class ExportDataView(APIView):
             )
 
         except Exception as e:
-            traceback.print_exc()
+            logger.exception("Export failed")
             return Response(
                 {"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )

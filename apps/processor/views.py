@@ -1,6 +1,7 @@
 import os
 import io
 import math
+import logging
 import pandas as pd
 from django.core.files.base import ContentFile
 from rest_framework.views import APIView
@@ -15,6 +16,8 @@ from apps.files.utils import (
     apply_filter_mask,
 )
 from apps.processor.models import ProcessingSession
+
+logger = logging.getLogger(__name__)
 
 
 class AggregationView(APIView):
@@ -344,9 +347,7 @@ class DateTimeView(APIView):
             )
 
         except Exception as e:
-            import traceback
-
-            traceback.print_exc()
+            logger.exception("Datetime normalization failed")
             return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
 
@@ -415,7 +416,5 @@ class ChartDataView(APIView):
             )
 
         except Exception as e:
-            import traceback
-
-            traceback.print_exc()
+            logger.exception("Chart data fetch failed")
             return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
