@@ -81,8 +81,8 @@ class PreviewFileView(APIView):
                 {"error": "File not found"}, status=status.HTTP_404_NOT_FOUND
             )
 
-        page = int(request.query_params.get("page", 1))
-        page_size = int(request.query_params.get("page_size", 20))
+        page = max(1, int(request.query_params.get("page", 1)))
+        page_size = min(1000, max(1, int(request.query_params.get("page_size", 20))))
         sort_by = request.query_params.get("sort_by", None)
         sort_order = request.query_params.get("sort_order", "asc")
         filter_col = request.query_params.get("filter_col", None)
