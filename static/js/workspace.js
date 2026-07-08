@@ -777,11 +777,13 @@ document.addEventListener('alpine:init', () => {
       
       Toast.info("Mengunduh hasil agregasi...");
       
-      // Convert to CSV
+      const sanitize = v =>
+        typeof v === 'string' && /^[=+\-@\t]/.test(v) ? "'" + v : v;
+
       const headers = this.aggregationColumns.join(',');
-      const rows = this.aggregationResult.map(row => 
+      const rows = this.aggregationResult.map(row =>
         this.aggregationColumns.map(col => {
-          let val = row[col];
+          let val = sanitize(row[col]);
           if (typeof val === 'string' && val.includes(',')) return `"${val}"`;
           return val;
         }).join(',')

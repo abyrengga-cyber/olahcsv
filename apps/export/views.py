@@ -17,6 +17,12 @@ import uuid
 logger = logging.getLogger(__name__)
 
 
+def _sanitize_df(df):
+    return df.map(
+        lambda v: "'" + v if isinstance(v, str) and v and v[0] in "=+-@\t" else v
+    )
+
+
 class ExportDataView(APIView):
     def post(self, request, *args, **kwargs):
         data = request.data
@@ -135,6 +141,8 @@ class ExportDataView(APIView):
             output_path = os.path.join(export_dir, output_filename)
             output_url = f"{settings.MEDIA_URL}exports/{output_filename}"
 
+            df = _sanitize_df(df)
+
             if export_format == "csv":
                 df.to_csv(output_path, index=False)
 
@@ -154,7 +162,7 @@ class ExportDataView(APIView):
                             c for c in aggregation_columns if c in agg_df.columns
                         ]
                         if valid_agg_cols:
-                            agg_df = agg_df[valid_agg_cols]
+                            agg_df = _sanitize_df(agg_df[valid_agg_cols])
                         agg_df.to_excel(writer, sheet_name="Agregasi", index=False)
 
                     # Sheet 3: Perbandingan (if available and included)
@@ -164,7 +172,7 @@ class ExportDataView(APIView):
                             c for c in comparison_columns if c in comp_df.columns
                         ]
                         if valid_comp_cols:
-                            comp_df = comp_df[valid_comp_cols]
+                            comp_df = _sanitize_df(comp_df[valid_comp_cols])
                         comp_df.to_excel(writer, sheet_name="Perbandingan", index=False)
 
             else:
