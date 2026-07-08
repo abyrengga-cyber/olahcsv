@@ -356,7 +356,7 @@ class ChartDataView(APIView):
         file_id = request.data.get("file_id")
         x_col = request.data.get("x_col")
         y_col = request.data.get("y_col")
-        max_points = int(request.data.get("max_points", 1000))
+        max_points = min(5000, int(request.data.get("max_points", 1000)))
         filters = request.data.get("filters", [])
         filter_logic = request.data.get("filter_logic", "AND")
 
