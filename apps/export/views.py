@@ -5,6 +5,7 @@ from rest_framework.response import Response
 from rest_framework import status
 from django.conf import settings
 from django.utils import timezone
+from datetime import timedelta
 from apps.files.models import UploadedFile
 from apps.files.utils import read_dataframe, apply_filter_mask
 from apps.processor.models import ProcessingSession
@@ -191,6 +192,15 @@ class ExportDataView(APIView):
                     output_file=f"exports/{output_filename}",
                     completed_at=now,
                 )
+
+                cutoff = now - timedelta(hours=24)
+                old = ExportJob.objects.filter(created_at__lt=cutoff)
+                for job in old:
+                    if job.output_file:
+                        p = os.path.join(settings.MEDIA_ROOT, job.output_file.name)
+                        if os.path.exists(p):
+                            os.remove(p)
+                old.delete()
             except Exception:
                 pass  # Don't fail the export if logging fails
 
