@@ -21,7 +21,6 @@ document.addEventListener('alpine:init', () => {
     sortColumn: null,
     sortOrder: null,
     sortVersion: 0,
-    tableRowsHtml: '',
     filters: [{ col: '', op: 'contains', query: '', values: [] }],
     filterLogic: 'AND',
 
@@ -250,7 +249,7 @@ document.addEventListener('alpine:init', () => {
           this.previewData = data.preview || [];
           this.totalRows = data.row_count;
           this.quality = data.quality || { complete_rows_pct: 100, problematic_cols_count: 0 };
-          this._renderRows();
+          this._afterRender();
         }
       } catch (e) {
         console.error(e);
@@ -281,30 +280,14 @@ document.addEventListener('alpine:init', () => {
       });
     },
 
-    _renderRows() {
-      const data = this.previewData;
-      const cols = this.displayColumns;
-      if (!data || data.length === 0) {
-        this.tableRowsHtml = '<tr><td colspan="100" style="text-align:center;color:var(--q-text-muted);padding:2rem;">Memuat data preview...</td></tr>';
-        return;
-      }
-      let html = '';
-      data.forEach((row, idx) => {
-        const rowNum = (this.currentPage - 1) * this.pageSize + idx + 1;
-        html += '<tr>';
-        html += `<td style="color:var(--q-text-muted)">${rowNum}</td>`;
-        cols.forEach(col => {
-          let val = row[col];
-          if (val === null || val === undefined || val === '') val = '\u2014';
-          const cls = (row[col] === null || row[col] === undefined || row[col] === '') ? ' class="cell-empty"' : '';
-          html += `<td${cls}>${String(val).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}</td>`;
-        });
-        html += '</tr>';
-      });
-      this.tableRowsHtml = html;
-      setTimeout(() => {
-        this._updateCustomTopScrollbar();
-      }, 0);
+    _cellValue(val) {
+      return (val === null || val === undefined || val === '') ? '\u2014' : val;
+    },
+    _cellEmpty(val) {
+      return (val === null || val === undefined || val === '') ? 'cell-empty' : '';
+    },
+    _afterRender() {
+      setTimeout(() => this._updateCustomTopScrollbar(), 0);
     },
 
     _updateCustomTopScrollbar() {
@@ -556,7 +539,7 @@ document.addEventListener('alpine:init', () => {
           this.quality = data.quality || { complete_rows_pct: 100, problematic_cols_count: 0 };
           this.refreshColumnLists();
           this.updateDisplayColumns();
-          this._renderRows();
+          this._afterRender();
           this._initColumnSortable();
           // Push initial history snapshot after load
           if (this._history.length === 0) {
@@ -592,7 +575,7 @@ document.addEventListener('alpine:init', () => {
           .filter(c => c.selected)
           .map(c => c.name);
       }
-      this._renderRows();
+      this._afterRender();
     },
 
     selectAll() {

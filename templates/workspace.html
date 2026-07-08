@@ -203,7 +203,22 @@
               </template>
             </tr>
           </thead>
-          <tbody x-html="tableRowsHtml" x-show="!isLoading">
+          <tbody x-show="!isLoading && previewData.length > 0">
+            <template x-for="(row, idx) in previewData" :key="idx">
+              <tr>
+                <td style="color:var(--q-text-muted)" x-text="(currentPage - 1) * pageSize + idx + 1"></td>
+                <template x-for="col in displayColumns" :key="col">
+                  <td :class="_cellEmpty(row[col])">
+                    <span x-text="_cellValue(row[col])"></span>
+                  </td>
+                </template>
+              </tr>
+            </template>
+          </tbody>
+          <tbody x-show="!isLoading && previewData.length === 0">
+            <tr>
+              <td :colspan="displayColumns.length + 1" style="text-align:center;color:var(--q-text-muted);padding:2rem;">Tidak ada data</td>
+            </tr>
           </tbody>
           <tbody x-show="isLoading">
             <template x-for="i in 5" :key="i">
