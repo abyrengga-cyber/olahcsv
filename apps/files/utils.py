@@ -145,6 +145,7 @@ def parse_file_metadata(
         delimiter = detect_delimiter(file_path, encoding)
 
     try:
+        loaded_all_rows = True
         if is_xlsx(file_path):
             df_full = read_dataframe(file_path)
             row_count = len(df_full)
@@ -159,7 +160,14 @@ def parse_file_metadata(
             )
 
             try:
-                df_full = pd.read_csv(file_path, sep=delimiter, encoding=encoding)
+                file_size = os.path.getsize(file_path)
+                if file_size > 200 * 1024 * 1024:
+                    loaded_all_rows = False
+                    df_full = pd.read_csv(
+                        file_path, sep=delimiter, encoding=encoding, nrows=10000
+                    )
+                else:
+                    df_full = pd.read_csv(file_path, sep=delimiter, encoding=encoding)
             except pd.errors.EmptyDataError:
                 df_full = pd.DataFrame(columns=df_sample.columns)
 
@@ -198,7 +206,8 @@ def parse_file_metadata(
             elif mask2 is not None:
                 df_full = df_full[mask2]
 
-        row_count = len(df_full)
+        if loaded_all_rows:
+            row_count = len(df_full)
 
         if sort_by and sort_by in df_full.columns:
             ascending = sort_order.lower() != "desc"
