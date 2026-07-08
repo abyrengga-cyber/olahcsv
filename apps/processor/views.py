@@ -2,6 +2,7 @@ import os
 import io
 import math
 import logging
+import numpy as np
 import pandas as pd
 from django.core.files.base import ContentFile
 from rest_framework.views import APIView
@@ -53,9 +54,6 @@ class AggregationView(APIView):
                 "MAX": "max",
                 "COUNT": "count",
             }
-
-            # Numeric columns list for safe execution
-            import numpy as np
 
             numeric_cols = set(df.select_dtypes(include=[np.number]).columns)
 

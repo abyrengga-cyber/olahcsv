@@ -1,6 +1,4 @@
 import os
-import io
-import base64
 import logging
 from rest_framework.views import APIView
 from rest_framework.response import Response
@@ -12,7 +10,6 @@ from apps.files.utils import read_dataframe, apply_filter_mask
 from apps.processor.models import ProcessingSession
 from apps.export.models import ExportJob
 import pandas as pd
-import uuid
 
 logger = logging.getLogger(__name__)
 

@@ -1,6 +1,4 @@
 import os
-import json
-import io
 import pandas as pd
 import chardet
 import numpy as np
