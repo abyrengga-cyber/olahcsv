@@ -182,9 +182,7 @@ class ExportDataView(APIView):
 
             # --- Record export in database for Dashboard history ---
             try:
-                session, _ = ProcessingSession.objects.get_or_create(
-                    user=request.user, status="ACTIVE", defaults={"configuration": {}}
-                )
+                session = ProcessingSession.get_active(request.user)
                 session.files.add(file_obj)
 
                 ExportJob.objects.create(

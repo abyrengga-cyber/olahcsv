@@ -37,9 +37,7 @@ class AggregationView(APIView):
 
         try:
             uploaded_file = UploadedFile.objects.get(id=file_id, user=request.user)
-            session, _ = ProcessingSession.objects.get_or_create(
-                user=request.user, status="ACTIVE", defaults={"configuration": {}}
-            )
+            session = ProcessingSession.get_active(request.user)
             session.files.add(uploaded_file)
 
             path = uploaded_file.file_path.path
@@ -142,9 +140,7 @@ class ComparisonView(APIView):
         try:
             uploaded_file = UploadedFile.objects.get(id=file_id, user=request.user)
 
-            session, _ = ProcessingSession.objects.get_or_create(
-                user=request.user, status="ACTIVE", defaults={"configuration": {}}
-            )
+            session = ProcessingSession.get_active(request.user)
             session.files.add(uploaded_file)
 
             path = uploaded_file.file_path.path
@@ -244,9 +240,7 @@ class DateTimeView(APIView):
         try:
             uploaded_file = UploadedFile.objects.get(id=file_id, user=request.user)
 
-            session, _ = ProcessingSession.objects.get_or_create(
-                user=request.user, status="ACTIVE", defaults={"configuration": {}}
-            )
+            session = ProcessingSession.get_active(request.user)
             session.files.add(uploaded_file)
 
             path = uploaded_file.file_path.path

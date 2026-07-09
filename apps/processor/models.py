@@ -12,5 +12,10 @@ class ProcessingSession(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     status = models.CharField(max_length=50, default="ACTIVE")
 
+    @classmethod
+    def get_active(cls, user):
+        cls.objects.filter(user=user, status="ACTIVE").update(status="CLOSED")
+        return cls.objects.create(user=user, status="ACTIVE", configuration={})
+
     def __str__(self):
         return f"Session {self.id} for {self.user.username}"
