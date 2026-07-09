@@ -30,6 +30,16 @@ class AggregationAPITest(APITestCase):
         )
         self.assertEqual(resp.status_code, status.HTTP_403_FORBIDDEN)
 
+    def test_aggregate_owner_only(self):
+        other = User.objects.create_user(username="other", password="testpass123")
+        self.client.force_authenticate(user=other)
+        resp = self.client.post(
+            self.aggregate_url,
+            {"file_id": self.file_id, "columns": ["value"], "types": ["SUM"]},
+            format="json",
+        )
+        self.assertEqual(resp.status_code, status.HTTP_400_BAD_REQUEST)
+
     def test_aggregate_missing_params(self):
         resp = self.client.post(self.aggregate_url, {}, format="json")
         self.assertEqual(resp.status_code, status.HTTP_400_BAD_REQUEST)
@@ -99,6 +109,21 @@ class ComparisonAPITest(APITestCase):
             },
         )
         self.assertEqual(resp.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_compare_owner_only(self):
+        other = User.objects.create_user(username="other", password="testpass123")
+        self.client.force_authenticate(user=other)
+        resp = self.client.post(
+            self.compare_url,
+            {
+                "file_id": self.file_id,
+                "col_a": "col_a",
+                "col_b": "col_b",
+                "calc_type": "pct_diff",
+            },
+            format="json",
+        )
+        self.assertEqual(resp.status_code, status.HTTP_400_BAD_REQUEST)
 
     def test_compare_missing_params(self):
         resp = self.client.post(self.compare_url, {}, format="json")

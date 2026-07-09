@@ -91,6 +91,16 @@ class ExportAPITest(APITestCase):
         )
         self.assertEqual(resp.status_code, status.HTTP_200_OK)
 
+    def test_export_owner_only(self):
+        other = User.objects.create_user(username="other", password="testpass123")
+        self.client.force_authenticate(user=other)
+        resp = self.client.post(
+            self.export_url,
+            {"file_ids": [self.file_id], "format": "csv"},
+            format="json",
+        )
+        self.assertEqual(resp.status_code, status.HTTP_500_INTERNAL_SERVER_ERROR)
+
     def test_export_no_file_ids(self):
         resp = self.client.post(
             self.export_url, {"file_ids": [], "format": "csv"}, format="json"

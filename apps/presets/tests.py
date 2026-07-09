@@ -60,6 +60,23 @@ class PresetAPITest(APITestCase):
         resp = self.client.get(url)
         self.assertEqual(resp.status_code, status.HTTP_404_NOT_FOUND)
 
+    def test_update_owner_only(self):
+        preset = Preset.objects.create(user=self.user, name="Old Name")
+        other = User.objects.create_user(username="other", password="testpass123")
+        self.client.force_authenticate(user=other)
+        url = reverse("preset-detail", args=[preset.pk])
+        resp = self.client.patch(url, {"name": "Hacked"}, format="json")
+        self.assertEqual(resp.status_code, status.HTTP_404_NOT_FOUND)
+
+    def test_delete_owner_only(self):
+        preset = Preset.objects.create(user=self.user, name="To Delete")
+        other = User.objects.create_user(username="other", password="testpass123")
+        self.client.force_authenticate(user=other)
+        url = reverse("preset-detail", args=[preset.pk])
+        resp = self.client.delete(url)
+        self.assertEqual(resp.status_code, status.HTTP_404_NOT_FOUND)
+        self.assertEqual(Preset.objects.count(), 1)
+
     def test_update_preset(self):
         preset = Preset.objects.create(user=self.user, name="Old Name")
         url = reverse("preset-detail", args=[preset.pk])
