@@ -157,6 +157,132 @@ def apply_filter_mask(df, col, op, query):
     return None
 
 
+def _resolve_encoding_and_delimiter(file_path, encoding, delimiter):
+    if not encoding or (encoding and encoding.lower() == "ascii"):
+        encoding = detect_encoding(file_path)
+    if not delimiter:
+        delimiter = detect_delimiter(file_path, encoding)
+    return encoding, delimiter
+
+
+def _load_dataframe(file_path, encoding, delimiter):
+    loaded_all_rows = True
+    if is_xlsx(file_path):
+        df_full = read_dataframe(file_path)
+        row_count = len(df_full)
+        df_sample = df_full.head(1000).copy()
+        return df_full, df_sample, row_count, loaded_all_rows
+
+    df_sample = pd.read_csv(file_path, sep=delimiter, encoding=encoding, nrows=1000)
+    try:
+        file_size = os.path.getsize(file_path)
+        if file_size > 200 * 1024 * 1024:
+            loaded_all_rows = False
+            with open(file_path, "rb") as f:
+                row_count = sum(1 for _ in f) - 1
+            df_full = pd.read_csv(
+                file_path, sep=delimiter, encoding=encoding, nrows=10000
+            )
+        else:
+            df_full = pd.read_csv(file_path, sep=delimiter, encoding=encoding)
+            row_count = len(df_full)
+    except pd.errors.EmptyDataError:
+        df_full = pd.DataFrame(columns=df_sample.columns)
+        row_count = 0
+    return df_full, df_sample, row_count, loaded_all_rows
+
+
+def _apply_filters(
+    df,
+    filters,
+    filter_logic,
+    filter_col=None,
+    filter_query=None,
+    filter_op="contains",
+    filter_col2=None,
+    filter_op2="contains",
+    filter_query2=None,
+):
+    if filters:
+        masks = []
+        for f in filters:
+            col = f.get("col", "")
+            op = f.get("op", "contains")
+            query = f.get("query", "")
+            m = apply_filter_mask(df, col, op, query)
+            if m is not None:
+                masks.append(m)
+        if masks:
+            combined = masks[0]
+            for m in masks[1:]:
+                if filter_logic == "OR":
+                    combined = combined | m
+                else:
+                    combined = combined & m
+            return df[combined]
+        return df
+
+    mask1 = apply_filter_mask(df, filter_col, filter_op or "contains", filter_query)
+    mask2 = apply_filter_mask(df, filter_col2, filter_op2 or "contains", filter_query2)
+
+    if mask1 is not None and mask2 is not None:
+        if filter_logic == "OR":
+            return df[mask1 | mask2]
+        return df[mask1 & mask2]
+    if mask1 is not None:
+        return df[mask1]
+    if mask2 is not None:
+        return df[mask2]
+    return df
+
+
+def _apply_sort(df, sort_by, sort_order):
+    if sort_by and sort_by in df.columns:
+        ascending = sort_order.lower() != "desc"
+        return df.sort_values(by=sort_by, ascending=ascending)
+    return df
+
+
+def _paginate(df, page, page_size):
+    skip_rows = (page - 1) * page_size
+    return df.iloc[skip_rows : skip_rows + page_size].reset_index(drop=True)
+
+
+def _build_columns_info(df_sample):
+    columns_info = []
+    problematic_cols_count = 0
+    for col in df_sample.columns:
+        dtype = str(df_sample[col].dtype)
+
+        if "int" in dtype or "float" in dtype:
+            col_type = "num"
+        elif "datetime" in dtype:
+            col_type = "date"
+        else:
+            col_name_lower = str(col).lower()
+            if any(
+                k in col_name_lower for k in ["date", "time", "tgl", "jam", "timestamp"]
+            ):
+                col_type = "date"
+            else:
+                col_type = "str"
+
+        missing_pct = round(df_sample[col].isnull().mean() * 100, 2)
+        if missing_pct > 0:
+            problematic_cols_count += 1
+        columns_info.append({"name": col, "type": col_type, "missing_pct": missing_pct})
+    return columns_info, problematic_cols_count
+
+
+def _build_quality(df_sample):
+    total_cells = df_sample.size
+    filled_cells = int(df_sample.count().sum())
+    complete_rows_pct = (
+        round((filled_cells / total_cells) * 100, 1) if total_cells > 0 else 100.0
+    )
+    return {"complete_rows_pct": complete_rows_pct}
+
+
 def parse_file_metadata(
     file_path,
     delimiter=None,
@@ -174,116 +300,33 @@ def parse_file_metadata(
     filter_logic="AND",
     filters=None,
 ):
-    if not encoding or (encoding and encoding.lower() == "ascii"):
-        encoding = detect_encoding(file_path)
-
-    if not delimiter:
-        delimiter = detect_delimiter(file_path, encoding)
-
     try:
-        loaded_all_rows = True
-        if is_xlsx(file_path):
-            df_full = read_dataframe(file_path)
-            row_count = len(df_full)
-            df_sample = df_full.head(1000).copy()
-        else:
-            df_sample = pd.read_csv(
-                file_path, sep=delimiter, encoding=encoding, nrows=1000
-            )
-
-            try:
-                file_size = os.path.getsize(file_path)
-                if file_size > 200 * 1024 * 1024:
-                    loaded_all_rows = False
-                    with open(file_path, "rb") as f:
-                        row_count = sum(1 for _ in f) - 1
-                    df_full = pd.read_csv(
-                        file_path, sep=delimiter, encoding=encoding, nrows=10000
-                    )
-                else:
-                    df_full = pd.read_csv(file_path, sep=delimiter, encoding=encoding)
-                    row_count = len(df_full)
-            except pd.errors.EmptyDataError:
-                df_full = pd.DataFrame(columns=df_sample.columns)
-
-        if filters:
-            masks = []
-            for f in filters:
-                col = f.get("col", "")
-                op = f.get("op", "contains")
-                query = f.get("query", "")
-                m = apply_filter_mask(df_full, col, op, query)
-                if m is not None:
-                    masks.append(m)
-            if masks:
-                combined = masks[0]
-                for m in masks[1:]:
-                    if filter_logic == "OR":
-                        combined = combined | m
-                    else:
-                        combined = combined & m
-                df_full = df_full[combined]
-        else:
-            mask1 = apply_filter_mask(
-                df_full, filter_col, filter_op or "contains", filter_query
-            )
-            mask2 = apply_filter_mask(
-                df_full, filter_col2, filter_op2 or "contains", filter_query2
-            )
-
-            if mask1 is not None and mask2 is not None:
-                if filter_logic == "OR":
-                    df_full = df_full[mask1 | mask2]
-                else:
-                    df_full = df_full[mask1 & mask2]
-            elif mask1 is not None:
-                df_full = df_full[mask1]
-            elif mask2 is not None:
-                df_full = df_full[mask2]
+        encoding, delimiter = _resolve_encoding_and_delimiter(
+            file_path, encoding, delimiter
+        )
+        df_full, df_sample, row_count, loaded_all_rows = _load_dataframe(
+            file_path, encoding, delimiter
+        )
+        df_full = _apply_filters(
+            df_full,
+            filters,
+            filter_logic,
+            filter_col,
+            filter_query,
+            filter_op,
+            filter_col2,
+            filter_op2,
+            filter_query2,
+        )
 
         if loaded_all_rows:
             row_count = len(df_full)
 
-        if sort_by and sort_by in df_full.columns:
-            ascending = sort_order.lower() != "desc"
-            df_full = df_full.sort_values(by=sort_by, ascending=ascending)
-
-        skip_rows = (page - 1) * page_size
-        df_page = df_full.iloc[skip_rows : skip_rows + page_size].reset_index(drop=True)
-
-        columns_info = []
-        problematic_cols_count = 0
-        for col in df_sample.columns:
-            dtype = str(df_sample[col].dtype)
-
-            if "int" in dtype or "float" in dtype:
-                col_type = "num"
-            elif "datetime" in dtype:
-                col_type = "date"
-            else:
-                col_name_lower = str(col).lower()
-                if any(
-                    k in col_name_lower
-                    for k in ["date", "time", "tgl", "jam", "timestamp"]
-                ):
-                    col_type = "date"
-                else:
-                    col_type = "str"
-
-            missing_pct = round(df_sample[col].isnull().mean() * 100, 2)
-            if missing_pct > 0:
-                problematic_cols_count += 1
-
-            columns_info.append(
-                {"name": col, "type": col_type, "missing_pct": missing_pct}
-            )
-
-        total_cells = df_sample.size
-        filled_cells = int(df_sample.count().sum())
-        complete_rows_pct = (
-            round((filled_cells / total_cells) * 100, 1) if total_cells > 0 else 100.0
-        )
-
+        df_full = _apply_sort(df_full, sort_by, sort_order)
+        df_page = _paginate(df_full, page, page_size)
+        columns_info, problematic_cols_count = _build_columns_info(df_sample)
+        quality = _build_quality(df_sample)
+        quality["problematic_cols_count"] = problematic_cols_count
         preview_data = df_page.fillna("").to_dict(orient="records")
 
         return {
@@ -296,10 +339,7 @@ def parse_file_metadata(
             "preview": preview_data,
             "page": page,
             "page_size": page_size,
-            "quality": {
-                "complete_rows_pct": complete_rows_pct,
-                "problematic_cols_count": problematic_cols_count,
-            },
+            "quality": quality,
         }
 
     except Exception as e:
