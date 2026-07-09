@@ -16,9 +16,10 @@ logger = logging.getLogger(__name__)
 
 
 def _sanitize_df(df):
-    return df.applymap(
-        lambda v: "'" + v if isinstance(v, str) and v and v[0] in "=+-@\t" else v
-    )
+    mapper = lambda v: "'" + v if isinstance(v, str) and v and v[0] in "=+-@\t" else v
+    if hasattr(df, "map"):
+        return df.map(mapper)
+    return df.applymap(mapper)
 
 
 class ExportDataView(APIView):
