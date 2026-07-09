@@ -1,12 +1,14 @@
 import io
 from django.urls import reverse
 from django.contrib.auth.models import User
+from django.core.cache import cache
 from rest_framework.test import APITestCase
 from rest_framework import status
 
 
 class AggregationAPITest(APITestCase):
     def setUp(self):
+        cache.clear()
         self.user = User.objects.create_user(
             username="testuser", password="testpass123"
         )
@@ -71,6 +73,7 @@ class AggregationAPITest(APITestCase):
 
 class ComparisonAPITest(APITestCase):
     def setUp(self):
+        cache.clear()
         self.user = User.objects.create_user(
             username="testuser", password="testpass123"
         )

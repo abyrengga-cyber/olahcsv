@@ -4,7 +4,7 @@ import math
 import logging
 import numpy as np
 import pandas as pd
-from django.core.files.base import ContentFile
+from django.core.files.base import ContentFile, File
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status

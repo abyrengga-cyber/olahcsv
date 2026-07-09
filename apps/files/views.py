@@ -6,7 +6,12 @@ from rest_framework.parsers import MultiPartParser, FormParser
 from rest_framework import status
 from .models import UploadedFile
 from .serializers import UploadedFileSerializer
-from .utils import parse_file_metadata, get_column_values, validate_file_mime
+from .utils import (
+    parse_file_metadata,
+    get_column_values,
+    validate_file_mime,
+    sanitize_filename,
+)
 
 
 class FileUploadView(APIView):
@@ -39,7 +44,7 @@ class FileUploadView(APIView):
 
             uploaded_file = UploadedFile.objects.create(
                 user=request.user,
-                original_filename=file_obj.name,
+                original_filename=sanitize_filename(file_obj.name),
                 file_path=file_obj,
                 file_size=file_obj.size,
                 status="PROCESSING",

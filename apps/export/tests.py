@@ -3,6 +3,7 @@ import os
 from django.urls import reverse
 from django.contrib.auth.models import User
 from django.conf import settings
+from django.core.cache import cache
 from rest_framework.test import APITestCase
 from rest_framework import status
 from apps.export.models import ExportJob
@@ -10,6 +11,7 @@ from apps.export.models import ExportJob
 
 class ExportAPITest(APITestCase):
     def setUp(self):
+        cache.clear()
         self.user = User.objects.create_user(
             username="testuser", password="testpass123"
         )

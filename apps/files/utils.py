@@ -8,6 +8,12 @@ XLSX_EXTENSIONS = {".xlsx", ".xls"}
 ALLOWED_EXTENSIONS = {".csv", ".xlsx", ".xls"}
 
 
+def sanitize_filename(name):
+    name = os.path.basename(name)
+    name = name.replace("\x00", "")
+    return name[:255]
+
+
 def validate_file_mime(file_obj):
     filename = getattr(file_obj, "name", "") or ""
     ext = os.path.splitext(filename)[1].lower()
