@@ -22,6 +22,8 @@ logger = logging.getLogger(__name__)
 
 
 class AggregationView(APIView):
+    throttle_scope = "heavy"
+
     def post(self, request):
         file_id = request.data.get("file_id")
         cols = request.data.get("columns", [])
@@ -123,6 +125,8 @@ class AggregationView(APIView):
 
 
 class ComparisonView(APIView):
+    throttle_scope = "heavy"
+
     def post(self, request):
         file_id = request.data.get("file_id")
         col_a = request.data.get("col_a")

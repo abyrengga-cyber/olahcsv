@@ -158,6 +158,15 @@ REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": [
         "rest_framework.authentication.SessionAuthentication",
     ],
+    "DEFAULT_THROTTLE_CLASSES": [
+        "rest_framework.throttling.UserRateThrottle",
+        "rest_framework.throttling.ScopedRateThrottle",
+    ],
+    "DEFAULT_THROTTLE_RATES": {
+        "user": "100/minute",
+        "heavy": "20/minute",
+        "uploads": "10/minute",
+    },
 }
 
 MAX_UPLOAD_SIZE = 50 * 1024 * 1024  # 50MB

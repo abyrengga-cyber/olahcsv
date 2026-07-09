@@ -22,6 +22,8 @@ def _sanitize_df(df):
 
 
 class ExportDataView(APIView):
+    throttle_scope = "heavy"
+
     def post(self, request, *args, **kwargs):
         data = request.data
         file_ids = data.get("file_ids", [])

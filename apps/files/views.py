@@ -12,6 +12,7 @@ from .utils import parse_file_metadata, get_column_values
 class FileUploadView(APIView):
     """View to handle file uploads."""
 
+    throttle_scope = "uploads"
     parser_classes = (MultiPartParser, FormParser)
 
     def post(self, request, *args, **kwargs):
