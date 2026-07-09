@@ -109,7 +109,7 @@ function uploadZone() {
             headers['X-CSRFToken'] = csrfTokenDoc.value;
           }
 
-          const response = await fetch('/api/v1/files/upload/', {
+          const response = await fetch(`${API_BASE}/files/upload/`, {
             method: 'POST',
             body: formData,
             headers: headers

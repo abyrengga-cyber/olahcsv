@@ -241,7 +241,7 @@ document.addEventListener('alpine:init', () => {
     async _fetchSortedPreview() {
       if (!this.fileId || !this.sortColumn) return;
       try {
-        let url = `/api/v1/files/${this.fileId}/preview/?page=${this.currentPage}&page_size=${this.pageSize}&sort_by=${encodeURIComponent(this.sortColumn)}&sort_order=${this.sortOrder}`;
+        let url = `${API_BASE}/files/${this.fileId}/preview/?page=${this.currentPage}&page_size=${this.pageSize}&sort_by=${encodeURIComponent(this.sortColumn)}&sort_order=${this.sortOrder}`;
         url += this._filterQueryString();
         const response = await fetch(url);
         const data = await response.json();
@@ -407,7 +407,7 @@ document.addEventListener('alpine:init', () => {
 
     async loadPreset(presetId) {
       try {
-        const response = await fetch(`/api/v1/presets/`);
+        const response = await fetch(`${API_BASE}/presets/`);
         const presets = await response.json();
         const preset = presets.find(p => String(p.id) === String(presetId));
         
@@ -473,7 +473,7 @@ document.addEventListener('alpine:init', () => {
       if (!f || !f.col || !this.fileId) return;
       f.values = [];
       try {
-        const resp = await fetch(`/api/v1/files/${this.fileId}/column-values/?column=${encodeURIComponent(f.col)}`);
+        const resp = await fetch(`${API_BASE}/files/${this.fileId}/column-values/?column=${encodeURIComponent(f.col)}`);
         const data = await resp.json();
         if (resp.ok && data.values) {
           f.values = data.values;
@@ -492,7 +492,7 @@ document.addEventListener('alpine:init', () => {
           this.sortOrder = null;
           this.sortVersion = 0;
         }
-        let url = `/api/v1/files/${this.fileId}/preview/?page=${page}&page_size=${this.pageSize}`;
+        let url = `${API_BASE}/files/${this.fileId}/preview/?page=${page}&page_size=${this.pageSize}`;
         url += this._filterQueryString();
         const response = await fetch(url);
         const data = await response.json();
@@ -622,7 +622,7 @@ document.addEventListener('alpine:init', () => {
           headers['X-CSRFToken'] = this._csrfToken;
         }
  
-        const response = await fetch('/api/v1/export/', {
+        const response = await fetch(`${API_BASE}/export/`, {
           method: 'POST',
           headers: headers,
           body: JSON.stringify({
@@ -726,7 +726,7 @@ document.addEventListener('alpine:init', () => {
 
       Toast.info("Menghitung agregasi...");
       try {
-        const response = await fetch('/api/v1/processor/aggregate/', {
+        const response = await fetch(`${API_BASE}/processor/aggregate/`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -794,7 +794,7 @@ document.addEventListener('alpine:init', () => {
 
       Toast.info("Memproses perbandingan...");
       try {
-        const response = await fetch('/api/v1/processor/compare/', {
+        const response = await fetch(`${API_BASE}/processor/compare/`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -837,7 +837,7 @@ document.addEventListener('alpine:init', () => {
 
       Toast.info("Menormalisasi waktu...");
       try {
-        const response = await fetch('/api/v1/processor/datetime/', {
+        const response = await fetch(`${API_BASE}/processor/datetime/`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -886,7 +886,7 @@ document.addEventListener('alpine:init', () => {
         chartDataPoints = this._extractChartData(this.aggregationResult);
       } else {
         try {
-          const response = await fetch('/api/v1/processor/chart-data/', {
+          const response = await fetch(`${API_BASE}/processor/chart-data/`, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
@@ -1017,7 +1017,7 @@ document.addEventListener('alpine:init', () => {
       };
 
       try {
-        const response = await fetch('/api/v1/presets/', {
+        const response = await fetch('${API_BASE}/presets/', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
