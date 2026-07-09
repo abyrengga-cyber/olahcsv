@@ -149,10 +149,6 @@ def parse_file_metadata(
             row_count = len(df_full)
             df_sample = df_full.head(1000).copy()
         else:
-            with open(file_path, "rb") as f:
-                total_raw_rows = sum(1 for _ in f)
-            row_count = total_raw_rows - 1 if total_raw_rows > 0 else 0
-
             df_sample = pd.read_csv(
                 file_path, sep=delimiter, encoding=encoding, nrows=1000
             )
@@ -161,11 +157,14 @@ def parse_file_metadata(
                 file_size = os.path.getsize(file_path)
                 if file_size > 200 * 1024 * 1024:
                     loaded_all_rows = False
+                    with open(file_path, "rb") as f:
+                        row_count = sum(1 for _ in f) - 1
                     df_full = pd.read_csv(
                         file_path, sep=delimiter, encoding=encoding, nrows=10000
                     )
                 else:
                     df_full = pd.read_csv(file_path, sep=delimiter, encoding=encoding)
+                    row_count = len(df_full)
             except pd.errors.EmptyDataError:
                 df_full = pd.DataFrame(columns=df_sample.columns)
 
