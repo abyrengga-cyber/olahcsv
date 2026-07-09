@@ -3,6 +3,7 @@ import tempfile
 import io
 import pandas as pd
 from django.test import TestCase
+from django.core.cache import cache
 from django.urls import reverse
 from django.contrib.auth.models import User
 from rest_framework.test import APITestCase, APIClient
@@ -53,6 +54,7 @@ class FilesUtilsTest(TestCase):
 
 class FileUploadAPITest(APITestCase):
     def setUp(self):
+        cache.clear()
         self.user = User.objects.create_user(
             username="testuser", password="testpass123"
         )
@@ -113,6 +115,7 @@ class FileUploadAPITest(APITestCase):
 
 class FilePreviewAPITest(APITestCase):
     def setUp(self):
+        cache.clear()
         self.user = User.objects.create_user(
             username="testuser", password="testpass123"
         )
@@ -168,6 +171,7 @@ class FilePreviewAPITest(APITestCase):
 
 class FileDeleteAPITest(APITestCase):
     def setUp(self):
+        cache.clear()
         self.user = User.objects.create_user(
             username="testuser", password="testpass123"
         )

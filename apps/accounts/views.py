@@ -50,18 +50,7 @@ def dashboard_chart_data(request):
 def dashboard(request):
     """Landing page with upload zone, stats, recent files."""
     if not request.user.is_authenticated:
-        return render(
-            request,
-            "dashboard.html",
-            {
-                "total_files": 0,
-                "total_columns": 0,
-                "total_exports": 0,
-                "total_presets": 0,
-                "recent_files": [],
-                "recent_presets": [],
-            },
-        )
+        return redirect("login")
 
     user = request.user
     recent_files = UploadedFile.objects.filter(user=user).order_by("-upload_at")

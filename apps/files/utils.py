@@ -2,8 +2,40 @@ import os
 import pandas as pd
 import chardet
 import numpy as np
+import filetype
 
 XLSX_EXTENSIONS = {".xlsx", ".xls"}
+ALLOWED_EXTENSIONS = {".csv", ".xlsx", ".xls"}
+
+
+def validate_file_mime(file_obj):
+    filename = getattr(file_obj, "name", "") or ""
+    ext = os.path.splitext(filename)[1].lower()
+
+    file_obj.seek(0)
+    magic_bytes = file_obj.read(2048)
+    file_obj.seek(0)
+
+    kind = filetype.guess(magic_bytes)
+
+    if kind and kind.extension in ("xlsx", "xls"):
+        detected_ext = f".{kind.extension}"
+        if ext and ext != detected_ext:
+            return (
+                False,
+                f"Extension '{ext}' tidak cocok dengan isi file (terdeteksi sebagai {detected_ext}).",
+            )
+        return True, ""
+
+    if ext == ".csv" or (not ext and b"\x00" not in magic_bytes):
+        if b"\x00" in magic_bytes:
+            return False, "File tidak valid (mengandung binary data)."
+        return True, ""
+
+    return (
+        False,
+        f"Tipe file '{ext}' tidak diizinkan. Hanya {', '.join(ALLOWED_EXTENSIONS)} yang diperbolehkan.",
+    )
 
 
 def _get_ext(file_path):

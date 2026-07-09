@@ -6,7 +6,7 @@ from rest_framework.parsers import MultiPartParser, FormParser
 from rest_framework import status
 from .models import UploadedFile
 from .serializers import UploadedFileSerializer
-from .utils import parse_file_metadata, get_column_values
+from .utils import parse_file_metadata, get_column_values, validate_file_mime
 
 
 class FileUploadView(APIView):
@@ -31,6 +31,12 @@ class FileUploadView(APIView):
 
         results = []
         for file_obj in files:
+            is_valid, error_msg = validate_file_mime(file_obj)
+            if not is_valid:
+                return Response(
+                    {"error": error_msg}, status=status.HTTP_400_BAD_REQUEST
+                )
+
             uploaded_file = UploadedFile.objects.create(
                 user=request.user,
                 original_filename=file_obj.name,
