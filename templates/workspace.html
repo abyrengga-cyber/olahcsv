@@ -258,6 +258,20 @@
           <i data-lucide="chevron-right" style="width:14px;height:14px"></i>
         </button>
       </div>
+      <!-- Page size selector -->
+      <div style="display:flex;align-items:center;gap:0.4rem;margin-top:0.4rem;font-size:0.78rem;color:var(--q-text-muted)">
+        <span>Tampilkan</span>
+        <select class="q-select" style="width:60px;padding:2px 4px;font-size:0.78rem"
+                x-model="pageSize"
+                @change="changePageSize(Number($event.target.value))">
+          <option value="10">10</option>
+          <option value="20">20</option>
+          <option value="40">40</option>
+          <option value="100">100</option>
+        </select>
+        <span>baris</span>
+        <span style="margin-left:auto" x-text="totalRows + ' baris total'"></span>
+      </div>
     </div>
   </div>
 

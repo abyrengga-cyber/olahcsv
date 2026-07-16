@@ -599,6 +599,17 @@ document.addEventListener('alpine:init', () => {
         document.querySelector('.q-table-wrap').scrollTop = 0;
     },
 
+    changePageSize(size) {
+        this.pageSize = size;
+        this.currentPage = 1;
+        this._saveState();
+        if (this.sortColumn && this.sortOrder) {
+            this._fetchSortedPreview();
+        } else {
+            this.loadPreview(1);
+        }
+    },
+
     updateDisplayColumns() {
       if (this.files.length > 0) {
         this.displayColumns = this.files[0].metadata.columns
