@@ -13,7 +13,7 @@ from apps.files.utils import (
     detect_encoding,
     detect_delimiter,
     read_dataframe,
-    apply_filter_mask,
+    apply_filters,
 )
 from apps.processor.models import ProcessingSession
 
@@ -382,23 +382,7 @@ class ChartDataView(APIView):
 
             df = read_dataframe(path, delimiter=delimiter, encoding=encoding)
 
-            if filters:
-                masks = []
-                for f in filters:
-                    col = f.get("col", "")
-                    op = f.get("op", "contains")
-                    query = f.get("query", "")
-                    m = apply_filter_mask(df, col, op, query)
-                    if m is not None:
-                        masks.append(m)
-                if masks:
-                    combined = masks[0]
-                    for m in masks[1:]:
-                        if filter_logic == "OR":
-                            combined = combined | m
-                        else:
-                            combined = combined & m
-                    df = df[combined]
+            df = apply_filters(df, filters, filter_logic)
 
             if x_col not in df.columns or y_col not in df.columns:
                 return Response(

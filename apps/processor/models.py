@@ -1,4 +1,4 @@
-from django.db import models
+from django.db import models, transaction
 from django.contrib.auth.models import User
 from apps.files.models import UploadedFile
 
@@ -14,11 +14,15 @@ class ProcessingSession(models.Model):
 
     @classmethod
     def get_active(cls, user):
-        session = cls.objects.filter(user=user, status="ACTIVE").last()
-        if session:
-            return session
-        cls.objects.filter(user=user, status="ACTIVE").update(status="CLOSED")
-        return cls.objects.create(user=user, status="ACTIVE", configuration={})
+        with transaction.atomic():
+            session = (
+                cls.objects.select_for_update()
+                .filter(user=user, status="ACTIVE")
+                .last()
+            )
+            if session:
+                return session
+            return cls.objects.create(user=user, status="ACTIVE", configuration={})
 
     def __str__(self):
         return f"Session {self.id} for {self.user.username}"

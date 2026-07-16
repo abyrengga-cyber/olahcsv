@@ -227,7 +227,7 @@ def _load_dataframe(file_path, encoding, delimiter):
     return df_full, df_sample, row_count, loaded_all_rows
 
 
-def _apply_filters(
+def apply_filters(
     df,
     filters,
     filter_logic,
@@ -342,7 +342,7 @@ def parse_file_metadata(
         df_full, df_sample, row_count, loaded_all_rows = _load_dataframe(
             file_path, encoding, delimiter
         )
-        df_full = _apply_filters(
+        df_full = apply_filters(
             df_full,
             filters,
             filter_logic,

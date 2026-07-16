@@ -129,3 +129,12 @@ class ExportAPITest(APITestCase):
         )
         self.assertEqual(resp.status_code, status.HTTP_200_OK)
         self.assertIn("Agregasi", resp.data["sheets"])
+
+    def test_export_invalid_format_rejected(self):
+        resp = self.client.post(
+            self.export_url,
+            {"file_ids": [self.file_id], "format": "sh"},
+            format="json",
+        )
+        self.assertEqual(resp.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("tidak didukung", resp.data["error"])
