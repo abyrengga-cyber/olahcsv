@@ -1,4 +1,3 @@
-import io
 from django.urls import reverse
 from django.contrib.auth.models import User
 from rest_framework.test import APITestCase
@@ -12,7 +11,7 @@ class PresetAPITest(APITestCase):
             username="testuser", password="testpass123"
         )
         self.client.force_authenticate(user=self.user)
-        self.list_url = reverse("preset-list-create")
+        self.list_url = reverse("presets:preset-list-create")
 
     def test_list_requires_auth(self):
         self.client.force_authenticate(user=None)
@@ -47,7 +46,7 @@ class PresetAPITest(APITestCase):
 
     def test_detail_requires_auth(self):
         preset = Preset.objects.create(user=self.user, name="Test")
-        url = reverse("preset-detail", args=[preset.pk])
+        url = reverse("presets:preset-detail", args=[preset.pk])
         self.client.force_authenticate(user=None)
         resp = self.client.get(url)
         self.assertEqual(resp.status_code, status.HTTP_403_FORBIDDEN)
@@ -56,7 +55,7 @@ class PresetAPITest(APITestCase):
         preset = Preset.objects.create(user=self.user, name="Test")
         other = User.objects.create_user(username="other", password="testpass123")
         self.client.force_authenticate(user=other)
-        url = reverse("preset-detail", args=[preset.pk])
+        url = reverse("presets:preset-detail", args=[preset.pk])
         resp = self.client.get(url)
         self.assertEqual(resp.status_code, status.HTTP_404_NOT_FOUND)
 
@@ -64,7 +63,7 @@ class PresetAPITest(APITestCase):
         preset = Preset.objects.create(user=self.user, name="Old Name")
         other = User.objects.create_user(username="other", password="testpass123")
         self.client.force_authenticate(user=other)
-        url = reverse("preset-detail", args=[preset.pk])
+        url = reverse("presets:preset-detail", args=[preset.pk])
         resp = self.client.patch(url, {"name": "Hacked"}, format="json")
         self.assertEqual(resp.status_code, status.HTTP_404_NOT_FOUND)
 
@@ -72,21 +71,21 @@ class PresetAPITest(APITestCase):
         preset = Preset.objects.create(user=self.user, name="To Delete")
         other = User.objects.create_user(username="other", password="testpass123")
         self.client.force_authenticate(user=other)
-        url = reverse("preset-detail", args=[preset.pk])
+        url = reverse("presets:preset-detail", args=[preset.pk])
         resp = self.client.delete(url)
         self.assertEqual(resp.status_code, status.HTTP_404_NOT_FOUND)
         self.assertEqual(Preset.objects.count(), 1)
 
     def test_update_preset(self):
         preset = Preset.objects.create(user=self.user, name="Old Name")
-        url = reverse("preset-detail", args=[preset.pk])
+        url = reverse("presets:preset-detail", args=[preset.pk])
         resp = self.client.patch(url, {"name": "New Name"}, format="json")
         self.assertEqual(resp.status_code, status.HTTP_200_OK)
         self.assertEqual(Preset.objects.get(pk=preset.pk).name, "New Name")
 
     def test_delete_preset(self):
         preset = Preset.objects.create(user=self.user, name="To Delete")
-        url = reverse("preset-detail", args=[preset.pk])
+        url = reverse("presets:preset-detail", args=[preset.pk])
         resp = self.client.delete(url)
         self.assertEqual(resp.status_code, status.HTTP_204_NO_CONTENT)
         self.assertEqual(Preset.objects.count(), 0)

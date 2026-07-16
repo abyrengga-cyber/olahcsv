@@ -10,7 +10,7 @@ python-dateutil==2.9.0.post0
 six==1.17.0
 sqlparse==0.5.5
 tzdata==2026.1
-gunicorn==21.2.0
+# gunicorn==21.2.0  # Linux only; use waitress on Windows
 python-decouple==3.8
 filetype==1.2.0
 

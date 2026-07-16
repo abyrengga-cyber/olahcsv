@@ -1,17 +1,21 @@
 import json
+import logging
+
 from django.conf import settings
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.parsers import MultiPartParser, FormParser
 from rest_framework import status
+
 from .models import UploadedFile
-from .serializers import UploadedFileSerializer
 from .utils import (
     parse_file_metadata,
     get_column_values,
     validate_file_mime,
     sanitize_filename,
 )
+
+logger = logging.getLogger(__name__)
 
 
 class FileUploadView(APIView):
@@ -92,8 +96,16 @@ class PreviewFileView(APIView):
                 {"error": "File not found"}, status=status.HTTP_404_NOT_FOUND
             )
 
-        page = max(1, int(request.query_params.get("page", 1)))
-        page_size = min(1000, max(1, int(request.query_params.get("page_size", 20))))
+        try:
+            page = max(1, int(request.query_params.get("page", 1)))
+        except (ValueError, TypeError):
+            page = 1
+        try:
+            page_size = min(
+                1000, max(1, int(request.query_params.get("page_size", 20)))
+            )
+        except (ValueError, TypeError):
+            page_size = 20
         sort_by = request.query_params.get("sort_by", None)
         sort_order = request.query_params.get("sort_order", "asc")
         filter_col = request.query_params.get("filter_col", None)
@@ -104,7 +116,13 @@ class PreviewFileView(APIView):
         filter_query2 = request.query_params.get("filter_query2", None)
         filter_logic = request.query_params.get("filter_logic", "AND")
         filters_raw = request.query_params.get("filters", None)
-        filters = json.loads(filters_raw) if filters_raw else None
+        if filters_raw:
+            try:
+                filters = json.loads(filters_raw)
+            except (json.JSONDecodeError, TypeError):
+                filters = None
+        else:
+            filters = None
 
         file_absolute_path = uploaded_file.file_path.path
         metadata = parse_file_metadata(
@@ -166,7 +184,9 @@ class ColumnValuesView(APIView):
                 encoding=uploaded_file.encoding,
             )
             return Response({"values": values}, status=status.HTTP_200_OK)
-        except Exception as e:
+        except Exception:
+            logger.exception("ColumnValuesView failed")
             return Response(
-                {"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                {"error": "Gagal mengambil nilai kolom."},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )

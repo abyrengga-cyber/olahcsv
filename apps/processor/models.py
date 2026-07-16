@@ -14,6 +14,9 @@ class ProcessingSession(models.Model):
 
     @classmethod
     def get_active(cls, user):
+        session = cls.objects.filter(user=user, status="ACTIVE").last()
+        if session:
+            return session
         cls.objects.filter(user=user, status="ACTIVE").update(status="CLOSED")
         return cls.objects.create(user=user, status="ACTIVE", configuration={})
 

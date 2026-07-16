@@ -374,26 +374,13 @@ document.addEventListener('alpine:init', () => {
         Toast.error("Tidak ada file yang dipilih.");
       }
 
-      // Custom top scrollbar (visual proxy for bottom scrollbar)
-      setTimeout(() => {
-        const wrap = document.querySelector('#preview-table-wrap');
-        const topBar = document.querySelector('.q-scrollbar-top');
-        if (wrap && topBar) {
-          this._updateCustomTopScrollbar();
-          this._initTopScrollbarDrag();
-          wrap.addEventListener('scroll', () => {
-            this._updateCustomTopScrollbar();
-          });
-        }
-      }, 200);
+      // Remove previous listeners to prevent duplicates on re-init
+      this._removeGlobalListeners();
 
-      // Update thumb on window resize
-      window.addEventListener('resize', () => {
-        this._updateCustomTopScrollbar();
-      });
-
-      // Keyboard shortcuts
-      document.addEventListener('keydown', (e) => {
+      // Bind handlers and store references for cleanup
+      this._onScroll = () => this._updateCustomTopScrollbar();
+      this._onResize = () => this._updateCustomTopScrollbar();
+      this._onKeydown = (e) => {
         if (e.ctrlKey && e.key === 'z') {
           e.preventDefault();
           if (e.shiftKey) {
@@ -402,7 +389,50 @@ document.addEventListener('alpine:init', () => {
             this.undo();
           }
         }
-      });
+      };
+
+      // Custom top scrollbar (visual proxy for bottom scrollbar)
+      setTimeout(() => {
+        const wrap = document.querySelector('#preview-table-wrap');
+        const topBar = document.querySelector('.q-scrollbar-top');
+        if (wrap && topBar) {
+          this._updateCustomTopScrollbar();
+          this._initTopScrollbarDrag();
+          wrap.addEventListener('scroll', this._onScroll);
+          this._scrollWrap = wrap;
+        }
+      }, 200);
+
+      // Update thumb on window resize
+      window.addEventListener('resize', this._onResize);
+
+      // Keyboard shortcuts
+      document.addEventListener('keydown', this._onKeydown);
+    },
+
+    _removeGlobalListeners() {
+      if (this._onScroll && this._scrollWrap) {
+        this._scrollWrap.removeEventListener('scroll', this._onScroll);
+        this._scrollWrap = null;
+      }
+      if (this._onResize) {
+        window.removeEventListener('resize', this._onResize);
+      }
+      if (this._onKeydown) {
+        document.removeEventListener('keydown', this._onKeydown);
+      }
+    },
+
+    destroy() {
+      this._removeGlobalListeners();
+      if (this._sortableInstance) {
+        this._sortableInstance.destroy();
+        this._sortableInstance = null;
+      }
+      if (this.chartInstance) {
+        this.chartInstance.destroy();
+        this.chartInstance = null;
+      }
     },
 
     async loadPreset(presetId) {
@@ -1017,7 +1047,7 @@ document.addEventListener('alpine:init', () => {
       };
 
       try {
-        const response = await fetch('${API_BASE}/presets/', {
+        const response = await fetch(`${API_BASE}/presets/`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -1068,8 +1098,4 @@ document.addEventListener('alpine:init', () => {
       Toast.success("Grafik berhasil diunduh.");
     }
   }));
-});
-
-document.addEventListener('DOMContentLoaded', () => {
-  // Chart initialization and other global logic can be maintained here if needed
 });

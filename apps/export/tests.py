@@ -1,8 +1,6 @@
 import io
-import os
 from django.urls import reverse
 from django.contrib.auth.models import User
-from django.conf import settings
 from django.core.cache import cache
 from rest_framework.test import APITestCase
 from rest_framework import status
@@ -99,7 +97,7 @@ class ExportAPITest(APITestCase):
             {"file_ids": [self.file_id], "format": "csv"},
             format="json",
         )
-        self.assertEqual(resp.status_code, status.HTTP_500_INTERNAL_SERVER_ERROR)
+        self.assertEqual(resp.status_code, status.HTTP_404_NOT_FOUND)
 
     def test_export_no_file_ids(self):
         resp = self.client.post(

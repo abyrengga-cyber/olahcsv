@@ -11,9 +11,8 @@ from apps.presets.models import Preset
 from apps.export.models import ExportJob
 
 
+@login_required
 def dashboard_chart_data(request):
-    if not request.user.is_authenticated:
-        return JsonResponse({"labels": [], "uploads": [], "exports": []})
     user = request.user
     uploads = (
         UploadedFile.objects.filter(user=user)
@@ -47,13 +46,11 @@ def dashboard_chart_data(request):
     )
 
 
+@login_required
 def dashboard(request):
     """Landing page with upload zone, stats, recent files."""
-    if not request.user.is_authenticated:
-        return redirect("login")
-
     user = request.user
-    recent_files = UploadedFile.objects.filter(user=user).order_by("-upload_at")
+    recent_files = UploadedFile.objects.filter(user=user).order_by("-upload_at")[:10]
     total_files = UploadedFile.objects.filter(user=user).count()
 
     col_sum = UploadedFile.objects.filter(user=user).aggregate(Sum("column_count"))[
@@ -62,7 +59,7 @@ def dashboard(request):
     total_columns = col_sum if col_sum else 0
 
     total_presets = Preset.objects.filter(user=user).count()
-    recent_presets = Preset.objects.filter(user=user).order_by("-created_at")
+    recent_presets = Preset.objects.filter(user=user).order_by("-created_at")[:10]
 
     total_exports = ExportJob.objects.filter(
         session__user=user, status="COMPLETED"
@@ -70,7 +67,7 @@ def dashboard(request):
 
     recent_exports = ExportJob.objects.filter(
         session__user=user, status="COMPLETED"
-    ).order_by("-completed_at")
+    ).order_by("-completed_at")[:10]
     import os
 
     for ex in recent_exports:

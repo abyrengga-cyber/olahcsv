@@ -4,11 +4,10 @@ import math
 import logging
 import numpy as np
 import pandas as pd
-from django.core.files.base import ContentFile, File
+from django.core.files.base import ContentFile
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
-from django.conf import settings
 from apps.files.models import UploadedFile
 from apps.files.utils import (
     detect_encoding,
@@ -118,8 +117,12 @@ class AggregationView(APIView):
                 }
             )
 
-        except Exception as e:
-            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+        except Exception:
+            logger.exception("AggregationView failed")
+            return Response(
+                {"error": "Gagal memproses agregasi."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
 
 class ComparisonView(APIView):
@@ -179,36 +182,35 @@ class ComparisonView(APIView):
                     if isinstance(v, float) and (math.isinf(v) or math.isnan(v)):
                         row[k] = None
 
-            # Save modified file to temp path
-            new_filename = f"processed_{uploaded_file.original_filename}"
-            new_dir = os.path.join(settings.MEDIA_ROOT, "uploads", "processed")
-            os.makedirs(new_dir, exist_ok=True)
-            new_full_path = os.path.join(new_dir, new_filename)
-
+            # Save modified file via BytesIO (single write, no orphan)
+            base_name = uploaded_file.original_filename
+            if base_name.startswith("processed_"):
+                base_name = base_name[10:]
+            new_filename = f"processed_{base_name}"
+            buf = io.BytesIO()
             df.to_csv(
-                new_full_path,
+                buf,
                 index=False,
                 sep=delimiter or ",",
                 encoding=encoding or "utf-8",
             )
+            csv_bytes = buf.getvalue()
 
-            # Create new UploadedFile record using Django file wrapper
-            with open(new_full_path, "rb") as f:
-                new_file = UploadedFile(
-                    user=uploaded_file.user,
-                    original_filename=new_filename,
-                    file_size=os.path.getsize(new_full_path),
-                    delimiter=delimiter,
-                    encoding=encoding,
-                    row_count=len(df),
-                    column_count=len(df.columns),
-                    status="READY",
-                )
-                new_file.file_path.save(
-                    os.path.join("uploads", "processed", new_filename),
-                    File(f),
-                    save=True,
-                )
+            new_file = UploadedFile(
+                user=uploaded_file.user,
+                original_filename=new_filename,
+                file_size=len(csv_bytes),
+                delimiter=delimiter,
+                encoding=encoding,
+                row_count=len(df),
+                column_count=len(df.columns),
+                status="READY",
+            )
+            new_file.file_path.save(
+                os.path.join("uploads", "processed", new_filename),
+                ContentFile(csv_bytes),
+                save=True,
+            )
 
             return Response(
                 {
@@ -220,8 +222,12 @@ class ComparisonView(APIView):
                 }
             )
 
-        except Exception as e:
-            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+        except Exception:
+            logger.exception("ComparisonView failed")
+            return Response(
+                {"error": "Gagal memproses perbandingan."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
 
 class DateTimeView(APIView):
@@ -290,6 +296,7 @@ class DateTimeView(APIView):
                         status=status.HTTP_400_BAD_REQUEST,
                     )
 
+            nat_mask = df[result_col].isna()
             if output_format == "YYYY-MM-DD HH:MM:SS":
                 df[result_col] = df[result_col].dt.strftime("%Y-%m-%d %H:%M:%S")
             elif output_format == "DD/MM/YYYY HH:MM:SS":
@@ -297,7 +304,9 @@ class DateTimeView(APIView):
             elif output_format == "ISO 8601":
                 df[result_col] = df[result_col].dt.strftime("%Y-%m-%dT%H:%M:%S")
             elif output_format == "Unix Timestamp":
+                df[result_col] = df[result_col].fillna(pd.Timestamp("1970-01-01"))
                 df[result_col] = df[result_col].astype("int64") // 10**9
+            df.loc[nat_mask, result_col] = None
 
             if drop_original:
                 keep = [c for c in df.columns if c not in originals]
@@ -342,9 +351,12 @@ class DateTimeView(APIView):
                 }
             )
 
-        except Exception as e:
+        except Exception:
             logger.exception("Datetime normalization failed")
-            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {"error": "Gagal memproses normalisasi waktu."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
 
 class ChartDataView(APIView):
@@ -411,6 +423,9 @@ class ChartDataView(APIView):
                 }
             )
 
-        except Exception as e:
+        except Exception:
             logger.exception("Chart data fetch failed")
-            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {"error": "Gagal mengambil data grafik."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )

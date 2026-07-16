@@ -1,4 +1,3 @@
-from django.shortcuts import render
 from django.views.generic import TemplateView
 from django.contrib.auth.mixins import LoginRequiredMixin
 from rest_framework import generics, permissions
@@ -16,10 +15,6 @@ class PresetListCreateView(generics.ListCreateAPIView):
 
     def perform_create(self, serializer):
         serializer.save(user=self.request.user)
-
-    def create(self, request, *args, **kwargs):
-        serializer = self.get_serializer(data=request.data)
-        return super().create(request, *args, **kwargs)
 
 
 class PresetDetailView(generics.RetrieveUpdateDestroyAPIView):

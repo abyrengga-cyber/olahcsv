@@ -1,12 +1,11 @@
 import os
 import tempfile
 import io
-import pandas as pd
 from django.test import TestCase
 from django.core.cache import cache
 from django.urls import reverse
 from django.contrib.auth.models import User
-from rest_framework.test import APITestCase, APIClient
+from rest_framework.test import APITestCase
 from rest_framework import status
 from apps.files.utils import detect_encoding, detect_delimiter, parse_file_metadata
 from apps.files.models import UploadedFile

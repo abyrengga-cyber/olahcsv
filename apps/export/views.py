@@ -5,7 +5,6 @@ from rest_framework.response import Response
 from rest_framework import status
 from django.conf import settings
 from django.utils import timezone
-from datetime import timedelta
 from apps.files.models import UploadedFile
 from apps.files.utils import read_dataframe, apply_filter_mask
 from apps.processor.models import ProcessingSession
@@ -16,10 +15,22 @@ logger = logging.getLogger(__name__)
 
 
 def _sanitize_df(df):
-    mapper = lambda v: "'" + v if isinstance(v, str) and v and v[0] in "=+-@\t" else v
+    def _escape(v):
+        if isinstance(v, str) and v:
+            first = v[0]
+            if first in "=+-@\t" or first in "\r\n\0" or ord(first) in (0xFFFE, 0xFEFF):
+                return "'" + v
+            for ch in ("\r", "\n", "\0"):
+                if ch in v:
+                    return "'" + v
+            for prefix in ("= ", "=	", "=\r", "=\n"):
+                if v.startswith(prefix):
+                    return "'" + v
+        return v
+
     if hasattr(df, "map"):
-        return df.map(mapper)
-    return df.applymap(mapper)
+        return df.map(_escape)
+    return df.applymap(_escape)
 
 
 class ExportDataView(APIView):
@@ -63,7 +74,13 @@ class ExportDataView(APIView):
 
         try:
             file_obj = UploadedFile.objects.get(id=file_ids[0], user=request.user)
+        except UploadedFile.DoesNotExist:
+            return Response(
+                {"error": "File not found"}, status=status.HTTP_404_NOT_FOUND
+            )
 
+        output_path = None
+        try:
             df = read_dataframe(
                 file_obj.file_path.path,
                 delimiter=file_obj.delimiter,
@@ -126,12 +143,23 @@ class ExportDataView(APIView):
                     if rename_map:
                         df = df.rename(columns=rename_map)
 
+            # Record export in database BEFORE writing file
+            now = timezone.now()
+            session = ProcessingSession.get_active(request.user)
+            session.files.add(file_obj)
+
+            export_job = ExportJob.objects.create(
+                session=session,
+                format=export_format,
+                status="PROCESSING",
+                completed_at=now,
+            )
+
             # Create export directory
             export_dir = os.path.join(settings.MEDIA_ROOT, "exports")
             os.makedirs(export_dir, exist_ok=True)
 
             # Build timestamped filename
-            now = timezone.now()
             ts = now.strftime("%Y%m%d_%H%M%S")
             base_name = (
                 os.path.splitext(file_obj.original_filename)[0]
@@ -149,10 +177,8 @@ class ExportDataView(APIView):
 
             elif export_format == "xlsx":
                 with pd.ExcelWriter(output_path, engine="openpyxl") as writer:
-                    # Sheet 1: Data Asli
                     df.to_excel(writer, sheet_name="Data", index=False)
 
-                    # Sheet 2: Agregasi (if available and included)
                     if (
                         include_aggregation
                         and aggregation_result
@@ -166,7 +192,6 @@ class ExportDataView(APIView):
                             agg_df = _sanitize_df(agg_df[valid_agg_cols])
                         agg_df.to_excel(writer, sheet_name="Agregasi", index=False)
 
-                    # Sheet 3: Perbandingan (if available and included)
                     if include_comparison and comparison_result and comparison_columns:
                         comp_df = pd.DataFrame(comparison_result)
                         valid_comp_cols = [
@@ -177,35 +202,17 @@ class ExportDataView(APIView):
                         comp_df.to_excel(writer, sheet_name="Perbandingan", index=False)
 
             else:
+                if output_path and os.path.exists(output_path):
+                    os.remove(output_path)
                 return Response(
                     {"error": "Invalid format"}, status=status.HTTP_400_BAD_REQUEST
                 )
 
-            # --- Record export in database for Dashboard history ---
-            try:
-                session = ProcessingSession.get_active(request.user)
-                session.files.add(file_obj)
+            # Update ExportJob with output file reference
+            export_job.output_file = f"exports/{output_filename}"
+            export_job.status = "COMPLETED"
+            export_job.save(update_fields=["output_file", "status"])
 
-                ExportJob.objects.create(
-                    session=session,
-                    format=export_format,
-                    status="COMPLETED",
-                    output_file=f"exports/{output_filename}",
-                    completed_at=now,
-                )
-
-                cutoff = now - timedelta(hours=24)
-                old = ExportJob.objects.filter(created_at__lt=cutoff)
-                for job in old:
-                    if job.output_file:
-                        p = os.path.join(settings.MEDIA_ROOT, job.output_file.name)
-                        if os.path.exists(p):
-                            os.remove(p)
-                old.delete()
-            except Exception:
-                pass  # Don't fail the export if logging fails
-
-            # Build sheet info for response
             sheets = ["Data"]
             if export_format == "xlsx":
                 if include_aggregation and aggregation_result and aggregation_columns:
@@ -218,8 +225,14 @@ class ExportDataView(APIView):
                 status=status.HTTP_200_OK,
             )
 
-        except Exception as e:
+        except Exception:
+            if output_path and os.path.exists(output_path):
+                try:
+                    os.remove(output_path)
+                except OSError:
+                    pass
             logger.exception("Export failed")
             return Response(
-                {"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                {"error": "Export gagal diproses."},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )

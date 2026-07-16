@@ -1,8 +1,10 @@
 import os
+import logging
 import pandas as pd
 import chardet
-import numpy as np
 import filetype
+
+logger = logging.getLogger(__name__)
 
 XLSX_EXTENSIONS = {".xlsx", ".xls"}
 ALLOWED_EXTENSIONS = {".csv", ".xlsx", ".xls"}
@@ -101,19 +103,52 @@ def detect_delimiter(file_path, encoding):
 def get_column_values(file_path, column, delimiter=None, encoding=None, max_values=500):
     if is_xlsx(file_path):
         df = pd.read_excel(file_path, engine="openpyxl")
-    else:
-        if not encoding:
-            encoding = detect_encoding(file_path)
-        if not delimiter:
-            delimiter = detect_delimiter(file_path, encoding)
-        try:
-            df = pd.read_csv(file_path, sep=delimiter, encoding=encoding)
-        except (UnicodeDecodeError, TypeError):
-            df = pd.read_csv(file_path, sep=delimiter, encoding="latin-1")
+        if column not in df.columns:
+            return []
+        values = (
+            df[column].dropna().astype(str).drop_duplicates().head(max_values).tolist()
+        )
+        return values
 
-    if column not in df.columns:
-        return []
-    values = df[column].dropna().astype(str).drop_duplicates().head(max_values).tolist()
+    if not encoding:
+        encoding = detect_encoding(file_path)
+    if not delimiter:
+        delimiter = detect_delimiter(file_path, encoding)
+
+    seen = set()
+    values = []
+    try:
+        for chunk in pd.read_csv(
+            file_path,
+            sep=delimiter,
+            encoding=encoding,
+            usecols=[column],
+            chunksize=10000,
+        ):
+            if column not in chunk.columns:
+                continue
+            for v in chunk[column].dropna().astype(str).unique():
+                if v not in seen and v:
+                    seen.add(v)
+                    values.append(v)
+                    if len(values) >= max_values:
+                        return values
+    except (UnicodeDecodeError, TypeError):
+        for chunk in pd.read_csv(
+            file_path,
+            sep=delimiter,
+            encoding="latin-1",
+            usecols=[column],
+            chunksize=10000,
+        ):
+            if column not in chunk.columns:
+                continue
+            for v in chunk[column].dropna().astype(str).unique():
+                if v not in seen and v:
+                    seen.add(v)
+                    values.append(v)
+                    if len(values) >= max_values:
+                        return values
     return values
 
 
@@ -342,5 +377,6 @@ def parse_file_metadata(
             "quality": quality,
         }
 
-    except Exception as e:
-        return {"success": False, "error": str(e)}
+    except Exception:
+        logger.exception("parse_file_metadata failed")
+        return {"success": False, "error": "Gagal memproses file."}

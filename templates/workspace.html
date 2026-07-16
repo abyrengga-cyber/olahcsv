@@ -109,7 +109,7 @@
               <span class="q-filter-between" x-text="filterLogic"></span>
             </template>
             <select class="q-select" style="width:100px;" x-model="filters[idx].col" @change="fetchColumnValues(idx)">
-              <option value="">Kolom <span x-text="idx+1"></span></option>
+              <option value="" x-text="'Kolom ' + (idx+1)"></option>
               <template x-for="col in availableColumns" :key="col">
                 <option :value="col" x-text="col"></option>
               </template>
@@ -170,7 +170,7 @@
                 </tr>
               </thead>
               <tbody>
-                <template x-for="row in aggregationResult" :key="JSON.stringify(row)">
+                <template x-for="(row, aIdx) in aggregationResult" :key="aIdx">
                   <tr>
                     <template x-for="col in aggregationColumns" :key="col">
                       <td x-text="row[col]"></td>
@@ -225,7 +225,7 @@
               <tr>
                 <td><div class="q-skeleton" style="height:16px;width:20px"></div></td>
                 <template x-for="j in Math.max(displayColumns.length, 3)" :key="j">
-                  <td><div class="q-skeleton" style="height:16px;width:Math.floor(Math.random()*40+40)+'%'"></div></td>
+                  <td><div class="q-skeleton" style="height:16px;width:60%"></div></td>
                 </template>
               </tr>
             </template>
@@ -244,7 +244,7 @@
                     x-text="p" 
                     @click="changePage(p)"
                     :aria-label="'Halaman ' + p"
-                    :aria-current="currentPage === p ? 'page' : false"></button>
+                    :aria-current="currentPage === p ? 'page' : null"></button>
         </template>
 
         <span x-show="totalPages > 5 && currentPage < totalPages - 2" style="color:var(--q-text-muted);font-size:0.8rem" aria-hidden="true">…</span>

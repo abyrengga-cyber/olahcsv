@@ -20,7 +20,7 @@ class AggregationAPITest(APITestCase):
             format="multipart",
         )
         self.file_id = upload_resp.data["files"][0]["id"]
-        self.aggregate_url = reverse("api_aggregate")
+        self.aggregate_url = reverse("processor:api_aggregate")
 
     def test_aggregate_requires_auth(self):
         self.client.force_authenticate(user=None)
@@ -95,7 +95,7 @@ class ComparisonAPITest(APITestCase):
             format="multipart",
         )
         self.file_id = upload_resp.data["files"][0]["id"]
-        self.compare_url = reverse("api_compare")
+        self.compare_url = reverse("processor:api_compare")
 
     def test_compare_requires_auth(self):
         self.client.force_authenticate(user=None)

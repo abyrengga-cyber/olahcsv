@@ -3,6 +3,7 @@ from django.urls import path, include
 from django.contrib.auth import views as auth_views
 from django.conf import settings
 from django.conf.urls.static import static
+from django.contrib.staticfiles.urls import staticfiles_urlpatterns
 from apps.accounts.views import (
     dashboard,
     workspace_view,
@@ -35,6 +36,7 @@ urlpatterns = [
     path("accounts/register/", register_view, name="register"),
 ]
 
-# Serve media files in development
+# Serve media and static files in development
 if settings.DEBUG:
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+    urlpatterns += staticfiles_urlpatterns()
